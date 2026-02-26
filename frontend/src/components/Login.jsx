@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './Login.css';
@@ -11,8 +11,11 @@ const Login = () => {
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [exiting, setExiting] = useState(false);
 
     const navigate = useNavigate();
+    const location = useLocation();
+    const fromRegister = location.state?.fromRegister;
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -76,9 +79,14 @@ const Login = () => {
         }
     };
 
+    const goToRegister = () => {
+        setExiting(true);
+        setTimeout(() => navigate('/register', { state: { fromLogin: true } }), 320);
+    };
+
     return (
         <div className="login-wrapper">
-            <div className="login-card">
+            <div className={`login-card${fromRegister ? ' card-enter-from-register' : ''}${exiting ? ' card-exit-to-register' : ''}`}>
                 <div className="login-header">
                     <div className="login-logo">
                         <i className="bi bi-mortarboard-fill"></i>
@@ -172,9 +180,9 @@ const Login = () => {
                 </div>
 
                 <div className="login-footer">
-                    <Link to="/register" className="login-register-btn">
+                    <button type="button" className="login-register-btn" onClick={goToRegister}>
                         Create Account
-                    </Link>
+                    </button>
                 </div>
             </div>
         </div>

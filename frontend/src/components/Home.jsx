@@ -100,7 +100,7 @@ const Home = () => {
         <div className="d-flex flex-row gap-5 justify-content-center options-container">
 
           {/* Start Test */}
-          <Link to="/start-test" className="option-card option-card-primary">
+          <Link to="/test-selection" className="option-card option-card-primary">
             <div className="option-icon">
               <i className="bi bi-pencil-square"></i>
             </div>

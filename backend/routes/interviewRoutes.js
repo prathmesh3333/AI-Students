@@ -9,6 +9,7 @@ const {
   getUserInterviews,
   getInterviewById,
   parseResume,
+  generateMockTest,
 } = require("../controllers/interviewController");
 
 const router = express.Router();
@@ -41,6 +42,7 @@ router.post("/start", startMockInterview);
 router.post("/respond", handleInterviewResponse);
 router.post("/summary", generateInterviewSummary);
 router.post("/save", saveInterview);
+router.post("/mock-test", generateMockTest);
 router.get("/user/:rollNo", getUserInterviews);
 router.get("/:id", getInterviewById);
 module.exports = router;

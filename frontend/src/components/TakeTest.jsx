@@ -28,7 +28,9 @@ const TakeTest = () => {
 
   const timerRef = useRef(null);
   const documentVisibilityRef = useRef(true);
+  const lastLockRef = useRef(0); // debounce camera-violation locks
 
+  const [lockReason, setLockReason] = useState("");
   const [violations, setViolations] = useState({
     NO_FACE: 0,
     MULTIPLE_FACE: 0,
@@ -51,22 +53,31 @@ const TakeTest = () => {
 
   //   // Later we will send this to backend
   // };
+  const LOCK_MESSAGES = {
+    TAB_SWITCH:     "You switched tabs during the test. Return to fullscreen to continue.",
+    NO_FACE:        "No face detected in the camera. Please ensure your face is clearly visible.",
+    MULTIPLE_FACE:  "Multiple faces detected. Only you should be visible during the test.",
+    VOICE_DETECTED: "Voice or noise was detected. Please maintain silence during the test.",
+  };
+
   const handleViolation = (type) => {
-    console.log("🚨 Violation:", type);
+    setToast({ message: `⚠️ ${type.replace(/_/g, " ")} detected`, type: "warning" });
+    setViolations(prev => ({ ...prev, [type]: (prev[type] || 0) + 1 }));
 
-    setToast({
-      message: `⚠️ ${type} detected`,
-      type: "warning"
-    });
-
-    setViolations(prev => ({
-      ...prev,
-      [type]: (prev[type] || 0) + 1
-    }));
-
-    // also count tab switch
     if (type === "TAB_SWITCH") {
       setTabSwitchCount(prev => prev + 1);
+      setLockReason(LOCK_MESSAGES.TAB_SWITCH);
+      setIsTestLocked(true);
+      setIsFullscreen(false);
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    } else {
+      // Camera/voice violations: lock with a 15-second debounce to avoid constant locking
+      const now = Date.now();
+      if (now - lastLockRef.current > 15000) {
+        lastLockRef.current = now;
+        setLockReason(LOCK_MESSAGES[type] || `${type.replace(/_/g, " ")} detected.`);
+        setIsTestLocked(true);
+      }
     }
   };
   // Fetch test data
@@ -276,16 +287,6 @@ const TakeTest = () => {
       if (document.hidden && !submitting) {
         documentVisibilityRef.current = false;
         handleViolation("TAB_SWITCH");
-        // setTabSwitchCount(prev => prev + 1);
-        setIsTestLocked(true);
-        setIsFullscreen(false);
-
-        // Exit fullscreen
-        if (document.exitFullscreen) {
-          document.exitFullscreen().catch(err => console.log("Error exiting fullscreen:", err));
-        }
-
-        setToast({ message: "⚠️ Warning: Tab switching is not allowed! The test is now locked. Click 'Go Fullscreen' to continue.", type: "warning" });
       } else {
         documentVisibilityRef.current = true;
       }
@@ -526,7 +527,7 @@ const TakeTest = () => {
             </div>
             <h3 className="lock-title">Test Locked</h3>
             <p className="lock-message">
-              You switched tabs during the test. To continue, you must enter fullscreen mode.
+              {lockReason}
             </p>
             <button
               className="btn btn-primary btn-lg go-fullscreen-btn"

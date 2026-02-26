@@ -385,12 +385,81 @@ const parseResume = async (req, res) => {
 //   parseResume,
 // };
 
+// ---------------- Generate Mock Test (PDF-based MCQs) ----------------
+const generateMockTest = async (req, res) => {
+  try {
+    const { branch, subject, difficulty, pdfText, numQuestions = 10 } = req.body;
+
+    if (!branch || !subject || !difficulty || !pdfText) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const count = Math.min(Math.max(parseInt(numQuestions) || 10, 1), 30);
+
+    const prompt = `You are an expert academic question paper setter for ${branch} engineering students.
+
+Generate exactly ${count} multiple-choice questions based ONLY on the following subject notes.
+
+Subject: ${subject}
+Branch: ${branch}
+Difficulty Level: ${difficulty}
+
+Subject Notes:
+${pdfText.substring(0, 3000)}
+
+STRICT RULES:
+1. Generate EXACTLY ${count} questions — no more, no less.
+2. Base every question directly on the provided notes.
+3. Difficulty must match "${difficulty}": Easy = recall/definition, Medium = application/understanding, Hard = analysis/problem-solving.
+4. Each question has exactly 4 options labeled A, B, C, D.
+5. Only ONE option is correct.
+6. "correct" field must be a single letter: A, B, C, or D.
+7. "explanation" is 1-2 sentences explaining why the answer is correct.
+8. Return ONLY a valid JSON array — no markdown, no extra text.
+
+Required JSON format:
+[
+  {
+    "question": "Question text here?",
+    "options": ["A. First option", "B. Second option", "C. Third option", "D. Fourth option"],
+    "correct": "A",
+    "explanation": "Brief explanation of the correct answer."
+  }
+]`;
+
+    let raw = await generateInterviewQuestion(prompt);
+    raw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+
+    let questions;
+    try {
+      questions = JSON.parse(raw);
+    } catch (_) {
+      const match = raw.match(/\[[\s\S]*\]/);
+      if (match) {
+        questions = JSON.parse(match[0]);
+      } else {
+        throw new Error("Could not parse questions JSON from AI response.");
+      }
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      throw new Error("Invalid questions array returned by AI.");
+    }
+
+    res.status(200).json({ success: true, questions });
+  } catch (error) {
+    console.error("❌ generateMockTest Error:", error);
+    res.status(500).json({ success: false, error: "Failed to generate mock test" });
+  }
+};
+
 module.exports = {
   startMockInterview,
   handleInterviewResponse,
   generateInterviewSummary,
   saveInterview,
   getUserInterviews,
-  getInterviewById,   // ✅ ADD THIS LINE
+  getInterviewById,
   parseResume,
+  generateMockTest,
 };

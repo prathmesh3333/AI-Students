@@ -8,6 +8,11 @@ import Login from "./Login";
 import Register from "./Register";
 import MockInterviewDashboard from "./MockInterviewDashboard";
 import StartTestDashboard from "./StartTestDashboard";
+import TestSelection from "./TestSelection";
+import MockTestSetup from "./MockTestSetup";
+import MockTestSession from "./MockTestSession";
+import MockTestResult from "./MockTestResult";
+import PreTestLobby from "./PreTestLobby";
 import StartMockInterview from "./StartMockInterview";
 import MockSession from "./MockSession";
 import QuestionModule from "./QuestionModule";
@@ -45,6 +50,11 @@ function App() {
 
         {/* Student Dashboard */}
         <Route path="/home" element={<Home />} />
+        <Route path="/test-selection" element={<TestSelection />} />
+        <Route path="/mock-test-setup" element={<MockTestSetup />} />
+        <Route path="/mock-test-session" element={<MockTestSession />} />
+        <Route path="/mock-test-result" element={<MockTestResult />} />
+        <Route path="/pre-test-lobby" element={<PreTestLobby />} />
         <Route path="/mock-interview" element={<MockInterviewDashboard />} />
         <Route path="/start-test" element={<StartTestDashboard />} />
 

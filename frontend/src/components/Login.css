@@ -44,6 +44,42 @@
   animation-delay: 5s;
 }
 
+/* ── Page-transition animations ───────────────────────────── */
+
+/* Default mount */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.93) translateY(18px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* Enter from register (register is conceptually to the left) */
+.login-card.card-enter-from-register {
+  animation: loginEnterFromRegister 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes loginEnterFromRegister {
+  from { opacity: 0; transform: translateX(70px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0)     scale(1); }
+}
+
+/* Exit to register */
+.login-card.card-exit-to-register {
+  animation: loginExitToRegister 0.32s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  pointer-events: none;
+}
+@keyframes loginExitToRegister {
+  from { opacity: 1; transform: translateX(0)     scale(1); }
+  to   { opacity: 0; transform: translateX(-70px) scale(0.96); }
+}
+
+/* Wrapper fade-in on page load */
+.login-wrapper {
+  animation: wrapperFadeIn 0.4s ease both;
+}
+@keyframes wrapperFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @keyframes float {
 
   0%,
@@ -275,6 +311,8 @@
   transition: all var(--transition-base);
   text-decoration: none;
   display: inline-block;
+  font-family: inherit;
+  letter-spacing: inherit;
 }
 
 .login-register-btn:hover {

@@ -1,8 +1,16 @@
 import { useState } from 'react';
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from 'axios';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import './Register.css';
+
+const passwordRules = [
+    { id: "minLen",   label: "At least 6 characters",        test: (p) => p.length >= 6 },
+    { id: "upper",    label: "At least one uppercase letter", test: (p) => /[A-Z]/.test(p) },
+    { id: "lower",    label: "At least one lowercase letter", test: (p) => /[a-z]/.test(p) },
+    { id: "number",   label: "At least one number",           test: (p) => /[0-9]/.test(p) },
+    { id: "special",  label: "At least one special character (@, #, $ …)", test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
 
 const Register = () => {
     const [rollNo, setRollNo] = useState("");
@@ -13,6 +21,11 @@ const Register = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showPasswordHints, setShowPasswordHints] = useState(false);
+    const [exiting, setExiting] = useState(false);
+
+    const location = useLocation();
+    const fromLogin = location.state?.fromLogin;
 
     const branches = [
         "Computer Engineering",
@@ -28,6 +41,12 @@ const Register = () => {
         e.preventDefault();
         setError("");
         setSuccess("");
+
+        const failedRule = passwordRules.find((r) => !r.test(password));
+        if (failedRule) {
+            setError(`Password must satisfy: ${failedRule.label.toLowerCase()}`);
+            return;
+        }
 
         if (password !== confirmPassword) {
             setError("Passwords do not match!");
@@ -60,9 +79,14 @@ const Register = () => {
         }
     };
 
+    const goToLogin = () => {
+        setExiting(true);
+        setTimeout(() => navigate('/login', { state: { fromRegister: true } }), 320);
+    };
+
     return (
         <div className="register-wrapper">
-            <div className="register-card">
+            <div className={`register-card${fromLogin ? ' card-enter-from-login' : ''}${exiting ? ' card-exit-to-login' : ''}`}>
                 <div className="register-header">
                     <div className="register-logo">
                         <i className="bi bi-person-plus-fill"></i>
@@ -143,8 +167,22 @@ const Register = () => {
                             className="form-control"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setShowPasswordHints(true)}
                             required
                         />
+                        {showPasswordHints && (
+                            <ul className="password-hints">
+                                {passwordRules.map((rule) => {
+                                    const met = rule.test(password);
+                                    return (
+                                        <li key={rule.id} className={met ? "hint-met" : "hint-unmet"}>
+                                            <i className={`bi ${met ? "bi-check-circle-fill" : "bi-circle"}`}></i>
+                                            {rule.label}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
                     </div>
                     <div className="form-group">
                         <label className="form-label">
@@ -176,9 +214,9 @@ const Register = () => {
                 </div>
 
                 <div className="register-footer">
-                    <Link to='/login' className="register-login-btn">
+                    <button type="button" className="register-login-btn" onClick={goToLogin}>
                         Sign In
-                    </Link>
+                    </button>
                 </div>
             </div>
         </div>

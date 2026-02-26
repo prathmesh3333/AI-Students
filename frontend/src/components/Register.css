@@ -9,9 +9,9 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--secondary-start) 0%, var(--secondary-end) 50%, var(--primary-end) 100%);
-  padding: 0px;
+  padding: 16px;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
 }
 
 
@@ -43,6 +43,42 @@
   animation-delay: 7s;
 } */
 
+/* ── Page-transition animations ───────────────────────────── */
+
+/* Default mount: scale + rise in */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.93) translateY(18px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* Enter from login (login is conceptually to the right) */
+.register-card.card-enter-from-login {
+  animation: registerEnterFromLogin 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes registerEnterFromLogin {
+  from { opacity: 0; transform: translateX(-70px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0)      scale(1); }
+}
+
+/* Exit to login */
+.register-card.card-exit-to-login {
+  animation: registerExitToLogin 0.32s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  pointer-events: none;
+}
+@keyframes registerExitToLogin {
+  from { opacity: 1; transform: translateX(0)    scale(1); }
+  to   { opacity: 0; transform: translateX(70px) scale(0.96); }
+}
+
+/* Wrapper fade-in on page load */
+.register-wrapper {
+  animation: wrapperFadeIn 0.4s ease both;
+}
+@keyframes wrapperFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @keyframes float {
   0%, 100% {
     transform: translate(0, 0) scale(1);
@@ -60,13 +96,13 @@
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-2xl);
 
-  width: 80%;
-  max-width: 480px;
+  width: 90%;
+  max-width: 460px;
 
-  padding: 12px 16px;
+  padding: 20px 24px;
 
-  height: 97vh;        
-  overflow: hidden;    
+  max-height: 96vh;
+  overflow-y: auto;
   position: relative;
   z-index: 1;
   animation: scaleIn 0.5s ease-out;
@@ -90,10 +126,10 @@
 
 .register-header {
   text-align: center;
-  margin-bottom: 8px;
-    display: flex;
+  margin-bottom: 16px;
+  display: flex;
   flex-direction: column;
-  align-items: center; 
+  align-items: center;
 }
 
 .register-logo {
@@ -131,12 +167,11 @@
 }
 
 .register-form {
-  margin-bottom:6px;
-  
+  margin-bottom: 12px;
 }
 
 .register-form .form-group {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .register-form .form-label {
@@ -187,6 +222,47 @@
   background-size: 1.5em 1.5em;
   padding-right: 2.5rem;
   cursor: pointer;
+}
+
+/* Password requirements checklist */
+.password-hints {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: slideIn 0.2s ease-out;
+}
+
+.password-hints li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: var(--font-weight-medium);
+  transition: color 0.25s ease;
+}
+
+.hint-met {
+  color: var(--success-solid, #10b981);
+}
+
+.hint-unmet {
+  color: var(--text-tertiary);
+}
+
+.hint-met i {
+  color: var(--success-solid, #10b981);
+  font-size: 12px;
+}
+
+.hint-unmet i {
+  color: var(--text-tertiary);
+  font-size: 12px;
 }
 
 .register-submit-btn {
@@ -261,7 +337,7 @@
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 6px 0;
+  margin: 12px 0;
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);
 }
@@ -295,6 +371,8 @@
   transition: all var(--transition-base);
   text-decoration: none;
   display: inline-block;
+  font-family: inherit;
+  letter-spacing: inherit;
 }
 
 .register-login-btn:hover {

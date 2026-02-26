@@ -101,7 +101,7 @@ const StartTestDashboard = () => {
   };
 
   const startTest = (testId) => {
-    navigate(`/test/${testId}`);
+    navigate("/pre-test-lobby", { state: { type: "academic", testId } });
   };
 
   const getScoreClass = (score) => {
