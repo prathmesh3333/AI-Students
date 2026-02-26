@@ -7,7 +7,7 @@ import "./MockSession.css";
 const MockSession = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { role, experience, company, selectedTopic, difficulty, resumeText, interviewData } =
+  const { role, experience, resumeText, interviewData } =
     location.state || {};
 
   const [messages, setMessages] = useState([]);
@@ -20,8 +20,8 @@ const MockSession = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
-  const [countdown, setCountdown] = useState(null); // For showing countdown
-  const [countdownProgress, setCountdownProgress] = useState(100); // Progress bar percentage
+  const [countdown, setCountdown] = useState(null);
+  const [countdownProgress, setCountdownProgress] = useState(100);
 
   // Refs
   const recognitionRef = useRef(null);
@@ -32,6 +32,46 @@ const MockSession = () => {
   const userInputRef = useRef("");
   const messagesRef = useRef([]);
 
+  // TTS streaming refs
+  const ttsQueueRef = useRef([]);
+  const ttsSpeakingRef = useRef(false);
+  const ttsRawBufferRef = useRef("");
+  const streamingDoneRef = useRef(false);
+  const voiceRef = useRef(null);
+
+  // Pick the best available TTS voice (Google > Microsoft Neural > any English)
+  useEffect(() => {
+    const pickVoice = () => {
+      const voices = synthesisRef.current.getVoices();
+      if (!voices.length) return;
+
+      const preferred = [
+        "Google US English",
+        "Google UK English Female",
+        "Google UK English Male",
+        "Microsoft Aria Online (Natural) - English (United States)",
+        "Microsoft Jenny Online (Natural) - English (United States)",
+        "Microsoft Guy Online (Natural) - English (United States)",
+        "Microsoft Aria - English (United States)",
+        "Microsoft Zira - English (United States)",
+        "Microsoft David - English (United States)",
+      ];
+
+      for (const name of preferred) {
+        const v = voices.find((v) => v.name === name);
+        if (v) { voiceRef.current = v; return; }
+      }
+      // Fallback: any en-US or en- voice
+      voiceRef.current =
+        voices.find((v) => v.lang === "en-US") ||
+        voices.find((v) => v.lang.startsWith("en")) ||
+        voices[0];
+    };
+
+    pickVoice();
+    synthesisRef.current.onvoiceschanged = pickVoice;
+  }, []);
+
   // Keep refs in sync with state
   useEffect(() => {
     userInputRef.current = userInput;
@@ -41,47 +81,167 @@ const MockSession = () => {
     messagesRef.current = messages;
   }, [messages]);
 
-  // Trigger auto-send function
-  const triggerAutoSend = async () => {
-    const answer = userInputRef.current.trim();
-
-    if (!answer) {
-      console.log("No answer to send");
+  // ── TTS Queue: speak next sentence, then auto-start mic when done ──
+  const flushTTSQueue = () => {
+    if (ttsSpeakingRef.current) return; // already speaking
+    if (ttsQueueRef.current.length === 0) {
+      // Queue drained — if streaming is also done, auto-start mic
+      if (streamingDoneRef.current) {
+        setIsSpeaking(false);
+        setTimeout(() => {
+          if (recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch (_) {}
+          }
+        }, 500);
+      }
       return;
     }
 
-    console.log("Auto-sending answer:", answer);
+    const sentence = ttsQueueRef.current.shift();
+    ttsSpeakingRef.current = true;
+    setIsSpeaking(true);
 
-    const newMessages = [...messagesRef.current, { sender: "user", text: answer }];
-    setMessages(newMessages);
+    const utterance = new SpeechSynthesisUtterance(sentence);
+    if (voiceRef.current) utterance.voice = voiceRef.current;
+    utterance.rate = 0.92;
+    utterance.pitch = 1.05;
+    utterance.volume = 1.0;
+
+    utterance.onend = () => {
+      ttsSpeakingRef.current = false;
+      flushTTSQueue();
+    };
+
+    utterance.onerror = () => {
+      ttsSpeakingRef.current = false;
+      flushTTSQueue();
+    };
+
+    synthesisRef.current.speak(utterance);
+  };
+
+  // ── Buffer chunks → extract complete sentences → queue for TTS ──
+  const addToTTSBuffer = (chunk) => {
+    ttsRawBufferRef.current += chunk;
+    // Split on sentence endings followed by whitespace
+    const parts = ttsRawBufferRef.current.split(/(?<=[.!?])\s+/);
+    // Last element may be incomplete — always keep it in the buffer
+    ttsRawBufferRef.current = parts.pop() || "";
+    // Queue any completed sentences
+    if (parts.length > 0) {
+      parts.forEach((s) => { if (s.trim()) ttsQueueRef.current.push(s.trim()); });
+      flushTTSQueue();
+    }
+  };
+
+  // ── Main send function using SSE streaming ──
+  const sendAnswer = async (answer, currentMessages) => {
+    if (!answer) return;
+
+    const newMessages = [...currentMessages, { sender: "user", text: answer }];
+    // Add placeholder AI message updated incrementally (typewriter effect)
+    const messagesWithPlaceholder = [...newMessages, { sender: "ai", text: "" }];
+    setMessages(messagesWithPlaceholder);
+    messagesRef.current = messagesWithPlaceholder;
     setUserInput("");
     setTranscript("");
     userInputRef.current = "";
     setLoading(true);
 
+    // Reset TTS state for new response
+    synthesisRef.current.cancel();
+    ttsQueueRef.current = [];
+    ttsSpeakingRef.current = false;
+    ttsRawBufferRef.current = "";
+    streamingDoneRef.current = false;
+
     try {
-      const res = await axios.post("http://localhost:5000/api/interview/respond", {
-        userMessage: answer,
-        previousMessages: newMessages,
-        role,
-        experience,
-        company,
-        topic: selectedTopic,
-        difficulty,
-        resumeText: resumeText || "",
+      const response = await fetch("http://localhost:5000/api/interview/respond-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userMessage: answer,
+          previousMessages: newMessages,
+          role,
+          experience,
+          resumeText: resumeText || "",
+        }),
       });
 
-      const aiResponse = res.data.response || "No response received.";
-      setMessages((prev) => [...prev, { sender: "ai", text: aiResponse }]);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const raw = decoder.decode(value, { stream: true });
+        const lines = raw.split("\n");
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const payload = JSON.parse(line.slice(6));
+
+            if (payload.done) {
+              // Flush any remaining buffer text
+              const remaining = ttsRawBufferRef.current.trim();
+              if (remaining) {
+                ttsQueueRef.current.push(remaining);
+                ttsRawBufferRef.current = "";
+              }
+              streamingDoneRef.current = true;
+              flushTTSQueue();
+
+            } else if (payload.chunk) {
+              fullText += payload.chunk;
+              // Update last AI message in real-time (typewriter effect)
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { sender: "ai", text: fullText };
+                return updated;
+              });
+              addToTTSBuffer(payload.chunk);
+
+            } else if (payload.error) {
+              throw new Error(payload.error);
+            }
+          } catch (_) {
+            // skip malformed SSE lines
+          }
+        }
+      }
     } catch (error) {
       console.error("Error fetching AI response:", error);
-      setMessages((prev) => [
-        ...prev,
-        { sender: "ai", text: "Something went wrong. Please try again." },
-      ]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          sender: "ai",
+          text: "Something went wrong. Please try again.",
+        };
+        return updated;
+      });
+      setIsSpeaking(false);
+      setTimeout(() => {
+        if (recognitionRef.current) {
+          try { recognitionRef.current.start(); } catch (_) {}
+        }
+      }, 500);
     } finally {
       setLoading(false);
     }
+  };
+
+  // ── Auto-send triggered by silence detection ──
+  const triggerAutoSend = () => {
+    const answer = userInputRef.current.trim();
+    if (!answer) {
+      console.log("No answer to send");
+      return;
+    }
+    console.log("Auto-sending answer:", answer);
+    sendAnswer(answer, messagesRef.current);
   };
 
   // Initialize Speech Recognition
@@ -112,47 +272,41 @@ const MockSession = () => {
           }
         }
 
-        console.log("Speech result - Final:", finalText, "Interim:", interimText);
-
-        // Update final transcript
         if (finalText) {
           setTranscript((prev) => prev + finalText);
           setUserInput((prev) => {
             const newInput = prev + finalText;
-            userInputRef.current = newInput; // Update ref immediately
-            console.log("Updated userInput to:", newInput);
+            userInputRef.current = newInput;
             return newInput;
           });
         }
 
-        // Update interim transcript (real-time display)
         setInterimTranscript(interimText);
 
-        // Clear any existing countdown
+        // Reset silence timer
         clearTimeout(silenceTimerRef.current);
         clearInterval(countdownIntervalRef.current);
         setCountdown(null);
         setCountdownProgress(100);
         shouldAutoSendRef.current = false;
 
-        // Start countdown after 3 seconds of silence
-        setCountdown(3);
+        // Start countdown after 1.5 seconds of silence
+        setCountdown(2);
 
         silenceTimerRef.current = setTimeout(() => {
-          console.log("3 seconds of silence detected, stopping recognition...");
           shouldAutoSendRef.current = true;
           if (recognitionRef.current) {
             recognitionRef.current.stop();
           }
-        }, 3000);
+        }, 1500);
 
         // Update countdown display every 100ms
         let elapsed = 0;
         countdownIntervalRef.current = setInterval(() => {
           elapsed += 100;
-          const remaining = 3000 - elapsed;
+          const remaining = 1500 - elapsed;
           const secondsLeft = Math.ceil(remaining / 1000);
-          const progress = (remaining / 3000) * 100;
+          const progress = (remaining / 1500) * 100;
 
           setCountdown(secondsLeft);
           setCountdownProgress(progress);
@@ -169,17 +323,14 @@ const MockSession = () => {
       };
 
       recognition.onend = () => {
-        console.log("Recognition ended, shouldAutoSend:", shouldAutoSendRef.current);
         setIsListening(false);
         setInterimTranscript("");
         clearInterval(countdownIntervalRef.current);
         setCountdown(null);
         setCountdownProgress(100);
 
-        // Auto-send if triggered by silence timeout
         if (shouldAutoSendRef.current) {
           shouldAutoSendRef.current = false;
-          console.log("Triggering auto-send with input:", userInputRef.current);
           // Small delay to ensure all state updates are processed
           setTimeout(() => {
             triggerAutoSend();
@@ -202,7 +353,7 @@ const MockSession = () => {
     };
   }, []);
 
-  // Text-to-Speech for AI messages
+  // Speak welcome / initial question on load
   useEffect(() => {
     if (interviewData?.question) {
       const welcomeMsg = { sender: "ai", text: interviewData.question };
@@ -215,24 +366,14 @@ const MockSession = () => {
     }
   }, [interviewData]);
 
-  // Speak AI responses automatically
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.sender === "ai" && !loading) {
-        speakText(lastMessage.text);
-      }
-    }
-  }, [messages, loading]);
-
-  // Text-to-Speech function
+  // Text-to-Speech for the welcome message (subsequent responses use TTS queue)
   const speakText = (text) => {
-    // Cancel any ongoing speech
     synthesisRef.current.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
+    if (voiceRef.current) utterance.voice = voiceRef.current;
+    utterance.rate = 0.92;
+    utterance.pitch = 1.05;
     utterance.volume = 1.0;
 
     utterance.onstart = () => {
@@ -241,10 +382,7 @@ const MockSession = () => {
 
     utterance.onend = () => {
       setIsSpeaking(false);
-      // Auto-start listening after AI finishes speaking
-      setTimeout(() => {
-        startListening();
-      }, 500);
+      setTimeout(() => startListening(), 500);
     };
 
     utterance.onerror = (event) => {
@@ -265,15 +403,16 @@ const MockSession = () => {
       setCountdown(null);
       setCountdownProgress(100);
       shouldAutoSendRef.current = false;
-      console.log("Starting speech recognition...");
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (_) {}
     }
   };
 
   // Stop listening
   const stopListening = () => {
     if (recognitionRef.current && isListening) {
-      shouldAutoSendRef.current = false; // Don't auto-send when manually stopped
+      shouldAutoSendRef.current = false;
       recognitionRef.current.stop();
       clearTimeout(silenceTimerRef.current);
       clearInterval(countdownIntervalRef.current);
@@ -283,52 +422,26 @@ const MockSession = () => {
     }
   };
 
-  // Stop speaking
+  // Stop speaking (clears TTS queue) then auto-start listening
   const stopSpeaking = () => {
     synthesisRef.current.cancel();
+    ttsQueueRef.current = [];
+    ttsSpeakingRef.current = false;
+    streamingDoneRef.current = true; // treat as done so mic starts
     setIsSpeaking(false);
+    setTimeout(() => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.start(); } catch (_) {}
+      }
+    }, 300);
   };
 
-  // Handle sending speech answer (auto-triggered after 3s silence)
-  const handleSendSpeech = async () => {
-    if (!userInput.trim()) return;
-
-    const answer = userInput.trim();
-    const newMessages = [...messages, { sender: "user", text: answer }];
-    setMessages(newMessages);
-    setUserInput("");
-    setTranscript("");
-    setLoading(true);
-
-    try {
-      const res = await axios.post("http://localhost:5000/api/interview/respond", {
-        userMessage: answer,
-        previousMessages: newMessages,
-        role,
-        experience,
-        company,
-        topic: selectedTopic,
-        difficulty,
-        resumeText: resumeText || "",
-      });
-
-      const aiResponse = res.data.response || "No response received.";
-      setMessages((prev) => [...prev, { sender: "ai", text: aiResponse }]);
-    } catch (error) {
-      console.error("Error fetching AI response:", error);
-      setMessages((prev) => [
-        ...prev,
-        { sender: "ai", text: "Something went wrong. Please try again." },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Manual send (kept for fallback)
-  const handleSend = async () => {
+  // Manual send (send button)
+  const handleSend = () => {
     stopListening();
-    handleSendSpeech();
+    const answer = userInputRef.current.trim();
+    if (!answer) return;
+    sendAnswer(answer, messagesRef.current);
   };
 
   const handleEndInterview = async () => {
@@ -337,7 +450,6 @@ const MockSession = () => {
       const res = await axios.post("http://localhost:5000/api/interview/summary", {
         messages,
         role,
-        company,
       });
 
       navigate("/interview-summary", {
@@ -345,14 +457,11 @@ const MockSession = () => {
           summary: res.data.summary,
           interviewData: {
             role,
-            company,
             experience,
-            topic: selectedTopic,
-            difficulty,
             resumeText: resumeText || "",
-            messages
-          }
-        }
+            messages,
+          },
+        },
       });
     } catch (error) {
       console.error("Error generating summary:", error);
@@ -362,14 +471,13 @@ const MockSession = () => {
     }
   };
 
-
   return (
     <div className="mock-session-container">
       <div className="mock-session-card">
         <div className="session-header">
           <h3>Mock Interview Session</h3>
           <p>
-            Role: <b>{role}</b> | Topic: <b>{selectedTopic}</b> | Company: <b>{company}</b>
+            Role: <b>{role}</b> | Experience: <b>{experience}</b>
           </p>
         </div>
 
@@ -384,7 +492,11 @@ const MockSession = () => {
               {msg.text}
             </div>
           ))}
-          {loading && <div className="typing">AI is thinking...</div>}
+          {/* Only show "thinking" when the placeholder AI bubble has no text yet */}
+          {loading && messages[messages.length - 1]?.sender === "ai" &&
+            messages[messages.length - 1]?.text === "" && (
+              <div className="typing">AI is thinking...</div>
+            )}
         </div>
 
         <div className="voice-input-section">
@@ -394,11 +506,8 @@ const MockSession = () => {
               <div className="status-badge speaking">
                 <i className="bi bi-volume-up-fill"></i>
                 <span>AI Speaking...</span>
-                <button
-                  className="btn btn-sm btn-outline-danger ms-2"
-                  onClick={stopSpeaking}
-                >
-                  Stop
+                <button className="stop-btn ms-2" onClick={stopSpeaking}>
+                  <i className="bi bi-stop-fill"></i>
                 </button>
               </div>
             )}
@@ -406,7 +515,7 @@ const MockSession = () => {
             {isListening && !isSpeaking && (
               <div className="status-badge listening">
                 <i className="bi bi-mic-fill pulse-icon"></i>
-                <span>Listening... (Auto-send after 3s silence)</span>
+                <span>Listening... (Auto-send after 1.5s silence)</span>
               </div>
             )}
 
@@ -417,10 +526,10 @@ const MockSession = () => {
               </div>
             )}
 
-            {loading && (
+            {loading && !isSpeaking && (
               <div className="status-badge processing">
                 <div className="spinner-border spinner-border-sm me-2"></div>
-                <span>AI is thinking...</span>
+                <span>AI is responding...</span>
               </div>
             )}
           </div>
@@ -467,17 +576,6 @@ const MockSession = () => {
               <i className={`bi ${isListening ? "bi-mic-fill" : "bi-mic"}`}></i>
               {isListening ? "Stop Recording" : "Start Recording"}
             </button>
-
-            {userInput && (
-              <button
-                className="btn btn-success"
-                onClick={handleSend}
-                disabled={loading || isSpeaking}
-              >
-                <i className="bi bi-send-fill"></i>
-                Send Now
-              </button>
-            )}
           </div>
         </div>
 
@@ -487,9 +585,32 @@ const MockSession = () => {
             onClick={handleEndInterview}
             disabled={ending}
           >
-            {ending ? "Generating Summary..." : "End Interview"}
+            {ending ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" />
+                Generating Summary...
+              </>
+            ) : "End Interview"}
           </button>
         </div>
+
+        {/* Full-page loading overlay while generating summary */}
+        {ending && (
+          <div className="session-loading-overlay">
+            <div className="loading-content">
+              <div className="loading-spinner">
+                <div className="spinner-ring"></div>
+                <div className="spinner-ring"></div>
+                <div className="spinner-ring"></div>
+              </div>
+              <h3 className="loading-title">Analyzing Your Interview...</h3>
+              <p className="loading-subtitle">AI is preparing your performance report</p>
+              <div className="loading-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

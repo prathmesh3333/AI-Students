@@ -21,4 +21,24 @@ async function generateInterviewQuestion(prompt) {
   }
 }
 
-module.exports = { generateInterviewQuestion };
+// ⭐ Streaming version — calls onChunk for each text piece
+async function streamInterviewResponse(prompt, onChunk) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContentStream(prompt);
+    let fullText = "";
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (text) {
+        fullText += text;
+        onChunk(text);
+      }
+    }
+    return fullText;
+  } catch (error) {
+    console.error("❌ Gemini Streaming Error:", error.message);
+    throw error;
+  }
+}
+
+module.exports = { generateInterviewQuestion, streamInterviewResponse };

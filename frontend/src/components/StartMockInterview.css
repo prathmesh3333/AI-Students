@@ -170,7 +170,8 @@
   font-size: 1.1rem;
   font-weight: 400;
   margin-bottom: 30px;
-  opacity: 0.9;
+  color: #ffffff;
+  opacity: 1;
 }
 
 @keyframes pulse {

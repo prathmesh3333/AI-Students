@@ -6,14 +6,14 @@ const fs = require("fs");
 // ---------------- Start the Interview ----------------
 const startMockInterview = async (req, res) => {
   try {
-    const { role, experience, company, resumeText } = req.body;
+    const { role, experience, resumeText } = req.body;
 
-    if (!role || !experience || !company) {
+    if (!role || !experience) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
     let prompt = `
-You are a professional senior interviewer at ${company}. You are conducting a real technical/behavioral interview for the position of ${role}.
+You are a professional senior interviewer conducting a real technical interview for the position of ${role}.
 
 The candidate has ${experience} of experience.
 ${resumeText ? `\n\nCandidate's Resume:\n${resumeText}\n\nBased on the resume above, ask questions that are relevant to their experience, skills, and projects mentioned.` : ''}
@@ -45,9 +45,9 @@ Begin the interview now.
 // ---------------- Handle User Response ----------------
 const handleInterviewResponse = async (req, res) => {
   try {
-    const { userMessage, role, company, resumeText, previousMessages } = req.body;
+    const { userMessage, role, resumeText, previousMessages } = req.body;
 
-    if (!userMessage || !role || !company) {
+    if (!userMessage || !role) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -56,7 +56,7 @@ const handleInterviewResponse = async (req, res) => {
       : '';
 
     const prompt = `
-You are a professional senior interviewer at ${company} conducting an interview for ${role} position.
+You are a professional senior interviewer conducting an interview for ${role} position.
 
 ${conversationHistory ? `Previous conversation:\n${conversationHistory}\n\n` : ''}
 
@@ -92,7 +92,7 @@ Respond now:
 // ---------------- Generate Interview Summary ----------------
 const generateInterviewSummary = async (req, res) => {
   try {
-    const { messages, role, company } = req.body;
+    const { messages, role } = req.body;
 
     if (!messages || messages.length === 0) {
       return res.status(400).json({ error: "No messages provided" });
@@ -103,7 +103,7 @@ const generateInterviewSummary = async (req, res) => {
       .join("\n");
 
     const prompt = `
-You are an expert interview evaluator analyzing a ${role} interview at ${company}.
+You are an expert interview evaluator analyzing a ${role} interview.
 
 Interview Transcript:
 ${transcript}

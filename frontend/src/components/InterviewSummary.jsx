@@ -3,6 +3,33 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./InterviewSummary.css";
 
+const ScoreRing = ({ score, label, color }) => {
+  const pct = (score / 10) * 100;
+  const radius = 36;
+  const circ = 2 * Math.PI * radius;
+  const dash = (pct / 100) * circ;
+
+  return (
+    <div className="score-ring-wrap">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="#e2e8f0" strokeWidth="8" />
+        <circle
+          cx="50" cy="50" r={radius} fill="none"
+          stroke={color} strokeWidth="8"
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
+          transform="rotate(-90 50 50)"
+          style={{ transition: "stroke-dasharray 1s ease" }}
+        />
+        <text x="50" y="54" textAnchor="middle" fontSize="18" fontWeight="700" fill={color}>
+          {score}
+        </text>
+      </svg>
+      <p className="score-label">{label}</p>
+    </div>
+  );
+};
+
 const InterviewSummary = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -22,291 +49,218 @@ const InterviewSummary = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // useEffect(() => {
-  //   if (summary) {
-  //     try {
-  //       let cleanSummary = summary.weakAreas;
-
-  //       // If the summary contains a JSON code block, extract and parse it
-  //       if (typeof cleanSummary === "string" && cleanSummary.includes("```json")) {
-  //         const jsonMatch = cleanSummary.match(/```json([\s\S]*?)```/);
-  //         if (jsonMatch && jsonMatch[1]) {
-  //           const parsed = JSON.parse(jsonMatch[1].trim());
-  //           setParsedSummary(parsed);
-  //           return;
-  //         }
-  //       }
-
-  //       // If summary is already a JSON object
-  //       if (typeof summary.weakAreas === "object") {
-  //         setParsedSummary(summary.weakAreas);
-  //       }
-  //     } catch (err) {
-  //       console.error("Error parsing summary JSON:", err);
-  //     }
-  //   }
-  // }, [summary]);
-useEffect(() => {
-  if (!summary) return;
-  
-
-  try {
-    // ✅ Case 1: summary is already an object from backend
-    if (typeof summary === "object") {
-      setParsedSummary({
-        confidence: summary.confidence ?? "N/A",
-        nervousness: summary.nervousness ?? "N/A",
-        weakAreas: summary.weakAreas ?? [],
-        strongAreas: summary.strongAreas ?? [],
-        overallSummary: summary.overallSummary ?? "",
-        technicalScore: Number(summary.technicalScore) ?? 0,
-        communicationScore: Number(summary.communicationScore) ?? 0,
-        recommendation: summary.recommendation ?? "",
-      });
-      
-      return;
+  useEffect(() => {
+    if (!summary) return;
+    try {
+      if (typeof summary === "object") {
+        setParsedSummary({
+          confidence: summary.confidence ?? "N/A",
+          nervousness: summary.nervousness ?? "N/A",
+          weakAreas: summary.weakAreas ?? [],
+          strongAreas: summary.strongAreas ?? [],
+          overallSummary: summary.overallSummary ?? "",
+          technicalScore: Number(summary.technicalScore) || 0,
+          communicationScore: Number(summary.communicationScore) || 0,
+          recommendation: summary.recommendation ?? "",
+        });
+        return;
+      }
+      if (typeof summary === "string") {
+        const clean = summary.replace(/```json/gi, "").replace(/```/g, "").trim();
+        const parsed = JSON.parse(clean);
+        setParsedSummary({
+          confidence: parsed.confidence ?? "N/A",
+          nervousness: parsed.nervousness ?? "N/A",
+          weakAreas: parsed.weakAreas ?? [],
+          strongAreas: parsed.strongAreas ?? [],
+          overallSummary: parsed.overallSummary ?? "",
+          technicalScore: Number(parsed.technicalScore) || 0,
+          communicationScore: Number(parsed.communicationScore) || 0,
+          recommendation: parsed.recommendation ?? "",
+        });
+      }
+    } catch (err) {
+      console.error("Error parsing summary JSON:", err);
     }
+  }, [summary]);
 
-    // ✅ Case 2: summary is a string (contains JSON)
-    if (typeof summary === "string") {
-      const cleanText = summary.replace(/```json/gi, "").replace(/```/g, "").trim();
-      const parsed = JSON.parse(cleanText);
+  useEffect(() => {
+    if (!summary) return;
+    if (saving || saved) return;
+    if (isAlreadySaved) return;
+    const timer = setTimeout(() => { handleSaveInterview(); }, 600);
+    return () => clearTimeout(timer);
+  }, [parsedSummary]);
 
-      setParsedSummary({
-        confidence: parsed.confidence ?? "N/A",
-        nervousness: parsed.nervousness ?? "N/A",
-        weakAreas: parsed.weakAreas ?? [],
-        strongAreas: parsed.strongAreas ?? [],
-        overallSummary: parsed.overallSummary ?? "",
-        technicalScore: Number(parsed.technicalScore) ?? 0,
-        communicationScore: Number(parsed.communicationScore) ?? 0,
-        recommendation: parsed.recommendation ?? "",
-      });
-    }
-  } catch (err) {
-    console.error("Error parsing summary JSON:", err);
-  }
-}, [summary]);
-
-useEffect(() => {
-  // run only after parsedSummary is ready
-  if (!summary) return;
-  if (saving || saved) return;
-  if (isAlreadySaved) return; // Don't auto-save if viewing an already saved interview
-
-  const timer = setTimeout(() => {
-    handleSaveInterview();   // auto save
-  }, 600); // small delay so parsedSummary is updated
-
-  return () => clearTimeout(timer);
-}, [parsedSummary]);
-
-
-
-//     useEffect(() => {
-//   if (!summary) return;
-//   if (saved || saving) return;
-
-//   // small delay so parsedSummary gets set
-//   const timer = setTimeout(() => {
-//     handleSaveInterview();
-//   }, 500);
-
-//   return () => clearTimeout(timer);
-// }, [summary]);
-
-// useEffect(() => {
-//   if (!summary) return;     // no summary yet
-//   if (saving || saved) return;  // already saving or saved
-
-//   const timer = setTimeout(() => {
-//     handleSaveInterview();
-//   }, 700);   // wait so parsedSummary is ready
-
-//   return () => clearTimeout(timer);
-// }, [summary]);
-
-
-
-  // Save interview summary to database
   const handleSaveInterview = async () => {
     try {
       if (saving || saved) return;
-
       setSaving(true);
-
       const rollNo = localStorage.getItem("rollNo");
       const studentName = localStorage.getItem("studentName");
-
       if (!rollNo || !studentName) {
         alert("User information not found. Please login again.");
         navigate("/login");
         return;
       }
-
-      const today = new Date().toISOString().split('T')[0];
-
-      const interviewPayload = {
+      const today = new Date().toISOString().split("T")[0];
+      await axios.post("http://localhost:5000/api/interview/save", {
         rollNo,
         studentName,
         date: today,
         role: interviewData?.role || "N/A",
-        company: interviewData?.company || "N/A",
         experience: interviewData?.experience || "N/A",
-        topic: interviewData?.topic || "N/A",
-        difficulty: interviewData?.difficulty || "N/A",
-        confidence: parsedSummary.confidence || summary?.confidence || "N/A",
-        nervousness: parsedSummary.nervousness || summary?.nervousness || "N/A",
-        weakAreas: parsedSummary.weakAreas || [],
-        strongAreas: parsedSummary.strongAreas || [],
-        focusAreas: [interviewData?.topic || "General"],
-        overallSummary: parsedSummary.overallSummary || summary?.overallSummary || "",
-        technicalScore: parsedSummary.technicalScore || summary?.technicalScore || 0,
-        communicationScore: parsedSummary.communicationScore || summary?.communicationScore || 0,
-        recommendation: parsedSummary.recommendation || summary?.recommendation || "",
+        confidence: parsedSummary.confidence,
+        nervousness: parsedSummary.nervousness,
+        weakAreas: parsedSummary.weakAreas,
+        strongAreas: parsedSummary.strongAreas,
+        focusAreas: [],
+        overallSummary: parsedSummary.overallSummary,
+        technicalScore: parsedSummary.technicalScore,
+        communicationScore: parsedSummary.communicationScore,
+        recommendation: parsedSummary.recommendation,
         resumeText: interviewData?.resumeText || "",
-        messages: interviewData?.messages || []
-      };
-
-      const response = await axios.post(
-        "http://localhost:5000/api/interview/save",
-        interviewPayload
-      );
-
-      if (response.data.success) {
-        setSaved(true);
-      }
+        messages: interviewData?.messages || [],
+      });
+      setSaved(true);
     } catch (error) {
       console.error("Error saving interview:", error);
-      alert("Failed to save interview. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
+  const rec = parsedSummary.recommendation || summary?.recommendation || "";
+  const recColor =
+    rec === "Highly Recommended" ? "#10b981" :
+    rec === "Recommended" ? "#3b82f6" : "#ef4444";
+
+  const confColor =
+    parsedSummary.confidence === "High" ? "#10b981" :
+    parsedSummary.confidence === "Medium" ? "#f59e0b" : "#ef4444";
+
+  const nervColor =
+    parsedSummary.nervousness === "Low" ? "#10b981" :
+    parsedSummary.nervousness === "Medium" ? "#f59e0b" : "#ef4444";
 
   return (
-    <div className="summary-container">
-      <h2 className="summary-heading">Interview Summary</h2>
+    <div className="is-page">
 
-      <div className="summary-content">
-        <div className="summary-section">
-          <h3>Overall Summary</h3>
-          <p className="overall-summary-text">
-            {parsedSummary.overallSummary || summary?.overallSummary || "No overall summary available."}
-          </p>
-        </div>
-
-        <div className="summary-section">
-          <h3>Confidence Level</h3>
-          <p>
-            <span className={`badge ${
-              (parsedSummary.confidence || summary?.confidence) === 'High' ? 'bg-success' :
-              (parsedSummary.confidence || summary?.confidence) === 'Medium' ? 'bg-warning' :
-              'bg-danger'
-            }`}>
-              {parsedSummary.confidence || summary?.confidence || "N/A"}
+      {/* ── Hero Header ── */}
+      <div className="is-hero">
+        <div className="is-hero-inner">
+          <div className="is-hero-left">
+            <p className="is-eyebrow">Performance Report</p>
+            <h1 className="is-hero-title">{interviewData?.role || "Mock Interview"}</h1>
+            <p className="is-hero-sub">
+              {interviewData?.experience && <span>{interviewData.experience} experience</span>}
+            </p>
+          </div>
+          <div className="is-rec-badge" style={{ borderColor: recColor, color: recColor }}>
+            <span className="is-rec-icon">
+              {rec === "Highly Recommended" ? "★" : rec === "Recommended" ? "✓" : "✗"}
             </span>
-          </p>
+            <span>{rec || "N/A"}</span>
+          </div>
         </div>
+        {saving && <p className="is-saving-note">Saving report...</p>}
+        {saved && <p className="is-saving-note saved">Report saved ✓</p>}
+      </div>
 
-        <div className="summary-section">
-          <h3>Nervousness Level</h3>
-          <p>
-            <span className={`badge ${
-              (parsedSummary.nervousness || summary?.nervousness) === 'Low' ? 'bg-success' :
-              (parsedSummary.nervousness || summary?.nervousness) === 'Medium' ? 'bg-warning' :
-              'bg-danger'
-            }`}>
-              {parsedSummary.nervousness || summary?.nervousness || "N/A"}
-            </span>
-          </p>
-        </div>
+      <div className="is-body">
 
-        <div className="summary-section">
-          <h3>Interview Performance Scores</h3>
-          <div className="d-flex gap-4 align-items-center">
-            <div>
-              <p className="mb-1"><strong>Technical Skills:</strong></p>
-              <div className="progress" style={{ width: '200px', height: '25px' }}>
-                <div
-                  className="progress-bar bg-info"
-                  role="progressbar"
-                  style={{ width: `${(parsedSummary.technicalScore || summary?.technicalScore || 0) * 10}%` }}
-                  aria-valuenow={parsedSummary.technicalScore || summary?.technicalScore || 0}
-                  aria-valuemin="0"
-                  aria-valuemax="10"
-                >
-                  {parsedSummary.technicalScore || summary?.technicalScore || 0}/10
-                </div>
+        {/* ── Scores ── */}
+        <div className="is-card is-scores-card">
+          <h2 className="is-card-title">Performance Scores</h2>
+          <div className="is-scores-row">
+            <ScoreRing
+              score={parsedSummary.technicalScore || 0}
+              label="Technical"
+              color="#3b82f6"
+            />
+            <div className="is-scores-divider" />
+            <ScoreRing
+              score={parsedSummary.communicationScore || 0}
+              label="Communication"
+              color="#8b5cf6"
+            />
+            <div className="is-scores-divider" />
+            <div className="is-sentiment-col">
+              <div className="is-sentiment-item">
+                <span className="is-sentiment-label">Confidence</span>
+                <span className="is-sentiment-pill" style={{ background: confColor }}>
+                  {parsedSummary.confidence}
+                </span>
               </div>
-            </div>
-            <div>
-              <p className="mb-1"><strong>Communication:</strong></p>
-              <div className="progress" style={{ width: '200px', height: '25px' }}>
-                <div
-                  className="progress-bar bg-success"
-                  role="progressbar"
-                  style={{ width: `${(parsedSummary.communicationScore || summary?.communicationScore || 0) * 10}%` }}
-                  aria-valuenow={parsedSummary.communicationScore || summary?.communicationScore || 0}
-                  aria-valuemin="0"
-                  aria-valuemax="10"
-                >
-                  {parsedSummary.communicationScore || summary?.communicationScore || 0}/10
-                </div>
+              <div className="is-sentiment-item">
+                <span className="is-sentiment-label">Nervousness</span>
+                <span className="is-sentiment-pill" style={{ background: nervColor }}>
+                  {parsedSummary.nervousness}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="summary-section">
-          <h3>Recommendation</h3>
-          <p>
-            <span className={`badge ${
-              (parsedSummary.recommendation || summary?.recommendation) === 'Highly Recommended' ? 'bg-success' :
-              (parsedSummary.recommendation || summary?.recommendation) === 'Recommended' ? 'bg-primary' :
-              'bg-danger'
-            } fs-6`}>
-              {parsedSummary.recommendation || summary?.recommendation || "N/A"}
-            </span>
+        {/* ── Overall Summary ── */}
+        <div className="is-card">
+          <h2 className="is-card-title">Overall Assessment</h2>
+          <p className="is-summary-text">
+            {parsedSummary.overallSummary || "No summary available."}
           </p>
         </div>
 
-        <div className="summary-section">
-          <h3>Areas for Improvement</h3>
-          {parsedSummary.weakAreas?.length ? (
-            <ul className="list-group">
-              {parsedSummary.weakAreas.map((area, index) => (
-                <li key={index} className="list-group-item">{area}</li>
-              ))}
+        {/* ── Areas Grid ── */}
+        <div className="is-areas-grid">
+          {/* Strong Areas */}
+          <div className="is-card is-strong-card">
+            <h2 className="is-card-title">
+              <span className="is-area-icon strong">↑</span> Strong Areas
+            </h2>
+            <ul className="is-area-list">
+              {parsedSummary.strongAreas?.length ? (
+                parsedSummary.strongAreas.map((area, i) => (
+                  <li key={i} className="is-area-item strong-item">
+                    <span className="is-area-dot strong-dot" />
+                    {area}
+                  </li>
+                ))
+              ) : (
+                <li className="is-area-empty">No specific areas identified.</li>
+              )}
             </ul>
-          ) : (
-            <p className="text-muted">No specific areas identified.</p>
-          )}
+          </div>
+
+          {/* Weak Areas */}
+          <div className="is-card is-weak-card">
+            <h2 className="is-card-title">
+              <span className="is-area-icon weak">↓</span> Areas to Improve
+            </h2>
+            <ul className="is-area-list">
+              {parsedSummary.weakAreas?.length ? (
+                parsedSummary.weakAreas.map((area, i) => (
+                  <li key={i} className="is-area-item weak-item">
+                    <span className="is-area-dot weak-dot" />
+                    {area}
+                  </li>
+                ))
+              ) : (
+                <li className="is-area-empty">No specific areas identified.</li>
+              )}
+            </ul>
+          </div>
         </div>
 
-        <div className="summary-section">
-          <h3>Strong Areas</h3>
-          {parsedSummary.strongAreas?.length ? (
-            <ul className="list-group">
-              {parsedSummary.strongAreas.map((area, index) => (
-                <li key={index} className="list-group-item list-group-item-success">{area}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted">No specific areas identified.</p>
-          )}
+        {/* ── Actions ── */}
+        <div className="is-actions">
+          <button className="is-btn is-btn-primary" onClick={() => navigate("/mock-interview")}>
+            View Dashboard
+          </button>
+          <button className="is-btn is-btn-secondary" onClick={() => navigate("/home")}>
+            Go to Home
+          </button>
         </div>
-      </div>
 
-      {/* Button Section */}
-      <div className="button-container">
-        <button className="dashboard-btn" onClick={() => navigate("/mock-interview")}>
-          Go to Dashboard
-        </button>
-        <button className="home-btn" onClick={() => navigate("/home")}>
-          Go to Home
-        </button>
       </div>
     </div>
   );

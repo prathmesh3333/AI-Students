@@ -10,9 +10,6 @@ const StartMockInterview = () => {
   const [formData, setFormData] = useState({
     role: "",
     experience: "",
-    company: "",
-    selectedTopic: "",
-    difficulty: "",
   });
 
   const [resumeFile, setResumeFile] = useState(null);
@@ -21,24 +18,21 @@ const StartMockInterview = () => {
   const [uploadError, setUploadError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ---------------- Handle Input Change ----------------
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // ---------------- Handle PDF Upload ----------------
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Clear previous errors
     setUploadError("");
 
     if (file.type !== "application/pdf") {
       setUploadError("Please upload a PDF file only");
       setResumeFile(null);
       setResumeText("");
-      e.target.value = null; // Clear the file input
+      e.target.value = null;
       return;
     }
 
@@ -46,7 +40,7 @@ const StartMockInterview = () => {
       setUploadError("File size should be less than 5MB");
       setResumeFile(null);
       setResumeText("");
-      e.target.value = null; // Clear the file input
+      e.target.value = null;
       return;
     }
 
@@ -54,15 +48,13 @@ const StartMockInterview = () => {
     setUploadingResume(true);
 
     try {
-      const formData = new FormData();
-      formData.append("resume", file);
+      const formDataUpload = new FormData();
+      formDataUpload.append("resume", file);
 
       const response = await axios.post(
         "http://localhost:5000/api/interview/parse-resume",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
+        formDataUpload,
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       if (response.data.success) {
@@ -79,11 +71,10 @@ const StartMockInterview = () => {
     }
   };
 
-  // ---------------- Handle Start Interview ----------------
   const handleStart = async () => {
-    const { role, experience, company, selectedTopic, difficulty } = formData;
+    const { role, experience } = formData;
 
-    if (!role || !experience || !company || !selectedTopic || !difficulty) {
+    if (!role || !experience) {
       alert("⚠️ Please fill out all fields before starting your mock interview!");
       return;
     }
@@ -96,27 +87,18 @@ const StartMockInterview = () => {
     try {
       setLoading(true);
 
-      // Send interview details with resume text to backend
       const res = await axios.post(
         "http://localhost:5000/api/interview/start",
-        {
-          ...formData,
-          resumeText: resumeText
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
+        { ...formData, resumeText },
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      console.log("✅ Response from backend:", res.data);
-
-      // Navigate to mock session page with data
       navigate("/mock-session", {
         state: {
           ...formData,
-          resumeText: resumeText,
-          interviewData: res.data
-        }
+          resumeText,
+          interviewData: res.data,
+        },
       });
     } catch (error) {
       console.error("❌ Error starting mock interview:", error);
@@ -128,7 +110,6 @@ const StartMockInterview = () => {
 
   return (
     <div className="start-mock-container">
-      {/* Full Page Loading Overlay */}
       {loading && (
         <div className="loading-overlay">
           <div className="loading-content">
@@ -177,57 +158,6 @@ const StartMockInterview = () => {
           />
         </div>
 
-        {/* Company Input */}
-        <div className="mb-4">
-          <label className="form-label fw-semibold">Company Name</label>
-          <input
-            type="text"
-            className="form-control"
-            name="company"
-            placeholder="e.g., Google, Infosys, TCS"
-            value={formData.company}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* Topic Dropdown */}
-        <div className="mb-4">
-          <label className="form-label fw-semibold">Select Topic</label>
-          <select
-            className="form-select"
-            name="selectedTopic"
-            value={formData.selectedTopic}
-            onChange={handleChange}
-          >
-            <option value="">-- Choose a topic --</option>
-            <option value="DSA">Data Structures & Algorithms</option>
-            <option value="Frontend">Frontend (HTML, CSS, React)</option>
-            <option value="Backend">Backend (Node.js, Express, MongoDB)</option>
-            <option value="Behavioral">Behavioral / HR Questions</option>
-          </select>
-        </div>
-
-        {/* Difficulty Buttons */}
-        <div className="mb-4">
-          <label className="form-label fw-semibold">Select Difficulty</label>
-          <div className="btn-group-container">
-            {["Easy", "Medium", "Hard"].map((level) => (
-              <button
-                key={level}
-                type="button"
-                className={`btn ${
-                  formData.difficulty === level
-                    ? "btn-primary"
-                    : "btn-outline-primary"
-                }`}
-                onClick={() => setFormData((prev) => ({ ...prev, difficulty: level }))}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Resume Upload */}
         <div className="mb-4">
           <label className="form-label fw-semibold">
@@ -241,7 +171,6 @@ const StartMockInterview = () => {
             disabled={uploadingResume}
           />
 
-          {/* Upload Status Messages */}
           {uploadingResume && (
             <div className="alert alert-info mt-2 mb-0 py-2 d-flex align-items-center" role="alert">
               <div className="spinner-border spinner-border-sm me-2" role="status">
@@ -275,7 +204,6 @@ const StartMockInterview = () => {
           )}
         </div>
 
-        {/* Submit Button */}
         <div className="text-center mt-4">
           <button
             onClick={handleStart}
