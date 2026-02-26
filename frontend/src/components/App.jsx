@@ -13,6 +13,7 @@ import MockTestSetup from "./MockTestSetup";
 import MockTestSession from "./MockTestSession";
 import MockTestResult from "./MockTestResult";
 import PreTestLobby from "./PreTestLobby";
+import Sidebar from "./Sidebar";
 import StartMockInterview from "./StartMockInterview";
 import MockSession from "./MockSession";
 import QuestionModule from "./QuestionModule";
@@ -40,6 +41,7 @@ import StudentsList from "./StudentsList";
 function App() {
   return (
     <BrowserRouter>
+      <Sidebar />
       <Routes>
         {/* Redirect root to /register */}
         <Route path="/" element={<Navigate to="/register" />} />

@@ -3,9 +3,8 @@
 .mode-selection-wrapper {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 60px 20px;
+  padding: 0;
   position: relative;
-  overflow: hidden;
 }
 
 .mode-selection-wrapper::before {
@@ -26,6 +25,7 @@
   margin: 0 auto;
   position: relative;
   z-index: 1;
+  padding: 50px 20px 60px;
 }
 
 /* Header */
@@ -208,28 +208,6 @@
 
 .view-mode:hover .mode-action {
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-}
-
-/* Back Button */
-.back-home-btn {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  padding: 14px 40px;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  display: block;
-  margin: 0 auto;
-}
-
-.back-home-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.8);
-  transform: translateX(-5px);
 }
 
 /* Animations */

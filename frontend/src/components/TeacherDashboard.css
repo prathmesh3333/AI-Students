@@ -640,18 +640,316 @@
     font-size: 1rem;
   }
 }
-.branch-dropdown {
-  position: relative;
+/* ── Method Selection Modal ─────────────────────────────────── */
+.method-modal {
+  max-width: 740px !important;
 }
 
-.branch-dropdown-menu {
-  position: absolute;
+.method-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.method-card:hover {
+  border-color: #004b8d;
+  box-shadow: 0 8px 24px rgba(0, 75, 141, 0.15);
+  transform: translateY(-4px);
+}
+
+.method-card-pdf:hover {
+  border-color: #dc3545;
+  box-shadow: 0 8px 24px rgba(220, 53, 69, 0.15);
+}
+
+.method-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+
+.method-icon-manual {
+  background: linear-gradient(135deg, #004b8d 0%, #0077cc 100%);
+  color: white;
+  box-shadow: 0 6px 18px rgba(0, 75, 141, 0.35);
+}
+
+.method-icon-pdf {
+  background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+  color: white;
+  box-shadow: 0 6px 18px rgba(220, 53, 69, 0.35);
+}
+
+.method-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  text-align: left;
   width: 100%;
+}
+
+.method-features li {
+  padding: 3px 0;
+}
+
+.method-features li::before {
+  content: "✓ ";
+  color: #28a745;
+  font-weight: 700;
+}
+
+.method-action {
+  margin-top: auto;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #004b8d;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: rgba(0, 75, 141, 0.08);
+  transition: background 0.2s;
+}
+
+.method-card:hover .method-action {
+  background: rgba(0, 75, 141, 0.15);
+}
+
+.method-action-pdf {
+  color: #dc3545;
+  background: rgba(220, 53, 69, 0.08);
+}
+
+.method-card-pdf:hover .method-action-pdf {
+  background: rgba(220, 53, 69, 0.15);
+}
+
+/* ── PDF Question Selection Modal ───────────────────────────── */
+.pdf-select-overlay {
+  align-items: stretch !important;
+  padding: 16px !important;
+}
+
+.pdf-select-modal {
   background: white;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  z-index: 1000;
-  max-height: 200px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: slideUp 0.3s ease;
+}
+
+.pdf-select-header {
+  padding: 20px 24px 14px;
+  border-bottom: 2px solid #e0e0e0;
+  flex-shrink: 0;
+  background: white;
+}
+
+.pdf-select-body {
   overflow-y: auto;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Counter pill */
+.pdf-select-counter {
+  background: #f0f4ff;
+  border: 2px solid #c0d4f0;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #004b8d;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.pdf-select-counter.counter-done {
+  background: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.pdf-select-counter .counter-num { font-size: 1.1rem; }
+.pdf-select-counter .counter-sep { color: #666; font-weight: 400; }
+.pdf-select-counter .counter-lbl { font-size: 0.78rem; font-weight: 600; color: #555; }
+
+/* Question cards */
+.pdf-q-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fafafa;
+  user-select: none;
+}
+
+.pdf-q-card:hover:not(.pdf-q-disabled) {
+  border-color: #004b8d;
+  background: #f0f4ff;
+  box-shadow: 0 4px 14px rgba(0, 75, 141, 0.12);
+}
+
+.pdf-q-selected {
+  border-color: #004b8d !important;
+  background: #eef3ff !important;
+  box-shadow: 0 4px 14px rgba(0, 75, 141, 0.18) !important;
+}
+
+.pdf-q-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pdf-q-checkbox {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 2px solid #c0c0c0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  transition: all 0.18s;
+  color: white;
+  font-size: 0.85rem;
+}
+
+.pdf-q-checkbox-checked {
+  background: #004b8d;
+  border-color: #004b8d;
+}
+
+.pdf-q-num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #004b8d;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+.pdf-q-text {
+  font-size: 0.97rem;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 14px;
+  line-height: 1.55;
+}
+
+/* Options grid */
+.pdf-opts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.pdf-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #e0e0e0;
+  background: white;
+  font-size: 0.87rem;
+}
+
+.pdf-opt-correct {
+  border-color: #28a745;
+  background: #d4edda;
+}
+
+.pdf-opt-letter {
+  font-weight: 800;
+  color: #004b8d;
+  min-width: 18px;
+}
+
+.pdf-opt-text {
+  flex: 1;
+  color: #333;
+}
+
+.pdf-q-explanation {
+  font-size: 0.82rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  border-left: 3px solid #0dcaf0;
+  padding: 6px 10px;
+  border-radius: 0 6px 6px 0;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .pdf-opts-grid { grid-template-columns: 1fr; }
+  .pdf-select-modal { border-radius: 12px; }
+}
+
+/* ── Branch Pills ───────────────────────────────────────────── */
+.branch-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.branch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 2px solid #dee2e6;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #555;
+  background: white;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.branch-pill input[type="checkbox"] {
+  display: none;
+}
+
+.branch-pill:hover {
+  border-color: #004b8d;
+  color: #004b8d;
+  background: #eef3ff;
+}
+
+.branch-pill-active {
+  border-color: #004b8d;
+  background: #004b8d;
+  color: white;
+}
+
+.branch-pill-active:hover {
+  background: #0060b0;
+  border-color: #0060b0;
 }

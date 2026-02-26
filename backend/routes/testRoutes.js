@@ -196,6 +196,8 @@ const router = express.Router();
 const Test = require("../models/Test");
 const multer = require("multer");
 const path = require("path");
+const pdfParse = require("pdf-parse");
+const { generateInterviewQuestion } = require("../services/geminiService");
 
 /* ===============================
    MULTER CONFIG (QUESTION IMAGES)
@@ -471,6 +473,92 @@ router.get("/published", async (req, res) => {
       success: false,
       error: "Failed to fetch tests",
     });
+  }
+});
+
+/* ===============================
+   GENERATE QUESTIONS FROM PDF
+================================ */
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") cb(null, true);
+    else cb(new Error("Only PDF files are allowed"), false);
+  },
+  limits: { fileSize: 15 * 1024 * 1024 },
+});
+
+router.post("/generate-from-pdf", pdfUpload.single("pdf"), async (req, res) => {
+  try {
+    const { subject, numQuestions } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: "Please upload a PDF file" });
+    }
+    if (!subject || !numQuestions) {
+      return res.status(400).json({ success: false, error: "Subject and number of questions are required" });
+    }
+
+    // Generate ~60% extra questions (minimum +3) so teacher can pick
+    const n = parseInt(numQuestions);
+    const toGenerate = n + Math.max(3, Math.ceil(n * 0.6));
+
+    // Parse the PDF
+    const pdfData = await pdfParse(req.file.buffer);
+    const pdfText = pdfData.text.trim();
+
+    if (!pdfText || pdfText.length < 50) {
+      return res.status(400).json({
+        success: false,
+        error: "PDF appears empty or is image-only. Please upload a text-based PDF.",
+      });
+    }
+
+    const prompt = `You are an expert exam question generator. Based on the PDF content below, generate exactly ${toGenerate} multiple-choice questions for the subject: "${subject}".
+
+Rules:
+- Each question must have exactly 4 options labeled A, B, C, D
+- Exactly one option must be the correct answer
+- Base questions ONLY on the provided PDF content
+- Make questions educational, clear, and unambiguous
+- Include a mix of easy, medium, and hard difficulty
+
+Return ONLY a valid JSON array — no markdown, no code fences, no extra text:
+[
+  {
+    "question": "Question text here?",
+    "options": ["A. First option", "B. Second option", "C. Third option", "D. Fourth option"],
+    "correct": "A",
+    "explanation": "Brief explanation of why this answer is correct"
+  }
+]
+
+PDF Content:
+${pdfText.substring(0, 12000)}`;
+
+    const raw = await generateInterviewQuestion(prompt);
+
+    // Strip potential markdown code fences Gemini may add
+    let cleaned = raw.trim();
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    }
+
+    let questions;
+    try {
+      questions = JSON.parse(cleaned);
+    } catch {
+      return res.status(500).json({ success: false, error: "AI returned an invalid response. Please try again." });
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(500).json({ success: false, error: "No questions were generated. Please try again." });
+    }
+
+    res.json({ success: true, questions });
+  } catch (error) {
+    console.error("PDF generation error:", error);
+    res.status(500).json({ success: false, error: error.message || "Failed to generate questions from PDF" });
   }
 });
 

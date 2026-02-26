@@ -156,16 +156,16 @@ const slides = chunkArray(filteredInterviews, chunkSize);
     <div className="mock-dashboard-wrapper">
       {/* Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark navbar-custom px-4">
+        <button
+          onClick={() => navigate("/home")}
+          className="btn btn-outline-light btn-sm fw-semibold me-3"
+        >
+          <i className="bi bi-arrow-left me-1"></i> Back to Home
+        </button>
         <h3 className="navbar-brand fw-bold mb-0">
           Mock Interview Dashboard
         </h3>
         <div className="ms-auto d-flex align-items-center gap-3">
-          <button
-            onClick={() => navigate("/home")}
-            className="btn btn-light btn-sm fw-semibold home-btn"
-          >
-            <i className="bi bi-house-door-fill"></i>
-          </button>
           <div className="profile-dropdown-container">
             <button
               className="profile-icon-btn"

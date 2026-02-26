@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import SuccessModal from "./SuccessModal";
+import "bootstrap-icons/font/bootstrap-icons.css";
 import "./QuestionModule.css";
+import "./PageNav.css";
 
 const QuestionModule = () => {
   const { branch, company } = useParams();
@@ -62,16 +64,16 @@ const QuestionModule = () => {
 
   return (
     <div className="question-module-wrapper">
+      <nav className="page-nav">
+        <button
+          className="page-nav-back"
+          onClick={() => navigate(branch ? `/company-list/${encodeURIComponent(branch)}?mode=add` : "/question-mode")}
+        >
+          <i className="bi bi-arrow-left"></i> Back
+        </button>
+      </nav>
       <div className="question-module-container">
         <div className="question-module-header">
-          {branch && (
-            <button
-              className="back-button-top"
-              onClick={() => navigate(`/company-list/${encodeURIComponent(branch)}`)}
-            >
-              ← Back to Companies
-            </button>
-          )}
           <h1 className="question-module-title">Question Module</h1>
           <p className="question-module-subtitle">
             {branch && company ? (

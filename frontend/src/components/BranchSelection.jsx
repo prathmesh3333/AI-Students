@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import "bootstrap-icons/font/bootstrap-icons.css";
 import "./BranchSelection.css";
+import "./PageNav.css";
 
 const BranchSelection = () => {
   const navigate = useNavigate();
@@ -51,6 +53,11 @@ const BranchSelection = () => {
 
   return (
     <div className="branch-selection-wrapper">
+      <nav className="page-nav">
+        <button className="page-nav-back" onClick={() => navigate("/question-mode")}>
+          <i className="bi bi-arrow-left"></i> Back
+        </button>
+      </nav>
       <div className="branch-selection-container">
         <div className="branch-header">
           <h1 className="branch-title">Select Your Branch</h1>
@@ -80,9 +87,6 @@ const BranchSelection = () => {
           ))}
         </div>
 
-        <button className="back-btn" onClick={() => navigate("/question-mode")}>
-          ← Back
-        </button>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import "bootstrap-icons/font/bootstrap-icons.css";
 import "./QuestionModeSelection.css";
+import "./PageNav.css";
 
 const QuestionModeSelection = () => {
   const navigate = useNavigate();
@@ -11,6 +13,11 @@ const QuestionModeSelection = () => {
 
   return (
     <div className="mode-selection-wrapper">
+      <nav className="page-nav">
+        <button className="page-nav-back" onClick={() => navigate("/home")}>
+          <i className="bi bi-arrow-left"></i> Back to Home
+        </button>
+      </nav>
       <div className="mode-selection-container">
         <div className="mode-header">
           <h1 className="mode-title">Question Module</h1>
@@ -63,9 +70,6 @@ const QuestionModeSelection = () => {
           </div>
         </div>
 
-        <button className="back-home-btn" onClick={() => navigate("/home")}>
-          ← Back to Home
-        </button>
       </div>
     </div>
   );
