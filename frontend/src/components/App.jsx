@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "../theme.css"; // Global theme styles
+import ProtectedRoute from "./ProtectedRoute";
 
 // Existing imports
 import Home from "./Home";
@@ -50,45 +51,34 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
 
-        {/* Student Dashboard */}
-        <Route path="/home" element={<Home />} />
-        <Route path="/test-selection" element={<TestSelection />} />
-        <Route path="/mock-test-setup" element={<MockTestSetup />} />
-        <Route path="/mock-test-session" element={<MockTestSession />} />
-        <Route path="/mock-test-result" element={<MockTestResult />} />
-        <Route path="/pre-test-lobby" element={<PreTestLobby />} />
-        <Route path="/mock-interview" element={<MockInterviewDashboard />} />
-        <Route path="/start-test" element={<StartTestDashboard />} />
+        {/* ── Student-only routes ─────────────────────────────────── */}
+        <Route path="/home" element={<ProtectedRoute studentOnly><Home /></ProtectedRoute>} />
+        <Route path="/test-selection" element={<ProtectedRoute studentOnly><TestSelection /></ProtectedRoute>} />
+        <Route path="/mock-test-setup" element={<ProtectedRoute studentOnly><MockTestSetup /></ProtectedRoute>} />
+        <Route path="/mock-test-session" element={<ProtectedRoute studentOnly><MockTestSession /></ProtectedRoute>} />
+        <Route path="/mock-test-result" element={<ProtectedRoute studentOnly><MockTestResult /></ProtectedRoute>} />
+        <Route path="/pre-test-lobby" element={<ProtectedRoute studentOnly><PreTestLobby /></ProtectedRoute>} />
+        <Route path="/mock-interview" element={<ProtectedRoute studentOnly><MockInterviewDashboard /></ProtectedRoute>} />
+        <Route path="/start-test" element={<ProtectedRoute studentOnly><StartTestDashboard /></ProtectedRoute>} />
+        <Route path="/start-mock-interview" element={<ProtectedRoute studentOnly><StartMockInterview /></ProtectedRoute>} />
+        <Route path="/mock-session" element={<ProtectedRoute studentOnly><MockSession /></ProtectedRoute>} />
+        <Route path="/interview-summary" element={<ProtectedRoute studentOnly><InterviewSummary /></ProtectedRoute>} />
+        <Route path="/interview-result/:id" element={<ProtectedRoute studentOnly><InterviewSummary /></ProtectedRoute>} />
+        <Route path="/test/:testId" element={<ProtectedRoute studentOnly><TakeTest /></ProtectedRoute>} />
+        <Route path="/test-result" element={<ProtectedRoute studentOnly><TestResultPage /></ProtectedRoute>} />
+        <Route path="/question-mode" element={<ProtectedRoute studentOnly><QuestionModeSelection /></ProtectedRoute>} />
+        <Route path="/branch-selection" element={<ProtectedRoute studentOnly><BranchSelection /></ProtectedRoute>} />
+        <Route path="/company-list/:branch" element={<ProtectedRoute studentOnly><CompanyList /></ProtectedRoute>} />
+        <Route path="/question-module/:branch/:company" element={<ProtectedRoute studentOnly><QuestionModule /></ProtectedRoute>} />
+        <Route path="/view-questions/:branch/:company" element={<ProtectedRoute studentOnly><ViewQuestions /></ProtectedRoute>} />
+        <Route path="/question-module" element={<ProtectedRoute studentOnly><QuestionModule /></ProtectedRoute>} />
 
-        {/* Mock Interview Routes */}
-        <Route path="/start-mock-interview" element={<StartMockInterview />} />
-        <Route path="/mock-session" element={<MockSession />} />
-
-        {/* ✅ New Route for Interview Summary */}
-        <Route path="/interview-summary" element={<InterviewSummary />} />
-
-        {/* ✅ Teacher Dashboard Route */}
-        <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-
-        {/* ✅ Teacher Results View */}
-        <Route path="/test-results-view" element={<TestResultsView />} />
-        <Route path="/test-results/:testId" element={<TestSpecificResults />} />
-        <Route path="/students-list" element={<StudentsList />} />
-        <Route path="/student-profile/:rollNo" element={<StudentProfile />} />
-
-        {/* ✅ Test Routes */}
-        <Route path="/test/:testId" element={<TakeTest />} />
-        <Route path="/test-result" element={<TestResultPage />} />
-
-        <Route path="/interview-result/:id" element={< InterviewSummary/>} />
-
-        {/* Question Module Routes */}
-        <Route path="/question-mode" element={<QuestionModeSelection />} />
-        <Route path="/branch-selection" element={<BranchSelection />} />
-        <Route path="/company-list/:branch" element={<CompanyList />} />
-        <Route path="/question-module/:branch/:company" element={<QuestionModule />} />
-        <Route path="/view-questions/:branch/:company" element={<ViewQuestions />} />
-        <Route path="/question-module" element={<QuestionModule />} />
+        {/* ── Teacher-only routes ─────────────────────────────────── */}
+        <Route path="/teacher-dashboard" element={<ProtectedRoute teacherOnly><TeacherDashboard /></ProtectedRoute>} />
+        <Route path="/test-results-view" element={<ProtectedRoute teacherOnly><TestResultsView /></ProtectedRoute>} />
+        <Route path="/test-results/:testId" element={<ProtectedRoute teacherOnly><TestSpecificResults /></ProtectedRoute>} />
+        <Route path="/students-list" element={<ProtectedRoute teacherOnly><StudentsList /></ProtectedRoute>} />
+        <Route path="/student-profile/:rollNo" element={<ProtectedRoute teacherOnly><StudentProfile /></ProtectedRoute>} />
 
 
       </Routes>

@@ -1,34 +1,35 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
 const Question = require("../models/Question");
+const { requireTeacher } = require("../middleware/authMiddleware");
 
-// Hardcoded teacher credentials
-const TEACHER_CREDENTIALS = {
-  email: "teacher@ai.com",
-  password: "Teacher@2024"
-};
-
-// Teacher login
+// ── Teacher login (public) ──────────────────────────────────
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  if (email === TEACHER_CREDENTIALS.email && password === TEACHER_CREDENTIALS.password) {
+  if (
+    email === process.env.TEACHER_EMAIL &&
+    password === process.env.TEACHER_PASSWORD
+  ) {
+    const token = jwt.sign(
+      { email, name: "Teacher", role: "teacher" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
     return res.json({
       success: true,
       message: "Teacher login successful",
-      teacher: {
-        email: TEACHER_CREDENTIALS.email,
-        name: "Teacher",
-        role: "teacher"
-      }
+      token,
+      teacher: { email, name: "Teacher", role: "teacher" },
     });
   }
 
-  res.status(401).json({
-    success: false,
-    error: "Invalid teacher credentials"
-  });
+  res.status(401).json({ success: false, error: "Invalid teacher credentials" });
 });
+
+// ── All routes below require a valid teacher JWT ────────────
+router.use(requireTeacher);
 
 // Add a new question
 router.post("/questions", async (req, res) => {

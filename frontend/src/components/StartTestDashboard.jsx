@@ -95,8 +95,7 @@ const StartTestDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("studentName");
-    localStorage.removeItem("rollNo");
+    localStorage.clear();
     navigate("/login");
   };
 

@@ -3,7 +3,8 @@ const bcrypt = require("bcrypt");
 
 const FormDataSchema = new mongoose.Schema({
   rollNo: { type: String, required: true, unique: true, trim: true },
-  name: { type: String, required: true, trim: true },
+  name:   { type: String, required: true, trim: true },
+  email:  { type: String, trim: true, lowercase: true },
   password: { type: String, required: true },
   branch: {
     type: String,

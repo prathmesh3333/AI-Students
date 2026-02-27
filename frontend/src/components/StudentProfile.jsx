@@ -149,14 +149,7 @@ setPendingTests(pending);
   };
 
   const handleLogout = () => {
-    if (isTeacher) {
-      localStorage.removeItem("teacherName");
-      localStorage.removeItem("teacherEmail");
-    } else {
-      localStorage.removeItem("studentName");
-      localStorage.removeItem("rollNo");
-      localStorage.removeItem("studentBranch");
-    }
+    localStorage.clear();
     navigate("/login");
   };
 

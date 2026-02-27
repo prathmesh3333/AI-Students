@@ -9,6 +9,7 @@ const testRoutes = require("./routes/testRoutes");
 const testResultRoutes = require("./routes/testResultRoutes");
 const path = require("path");
 const questionRoutes = require("./routes/questionRoutes");
+const { requireAuth } = require("./middleware/authMiddleware");
 
 
 
@@ -26,7 +27,7 @@ app.use(
 
 // ---------------- MongoDB Connection ----------------
 mongoose
-  .connect("mongodb://127.0.0.1:27017/practice_mern", {
+  .connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/practice_mern", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -34,13 +35,17 @@ mongoose
   .catch((err) => console.log("❌ MongoDB connection error:", err));
 
 // ---------------- Modular Routes ----------------
+// Public routes (no token needed)
 app.use("/api/auth", authRoutes);
-app.use("/api/interview", interviewRoutes);
-app.use("/api/teacher", teacherRoutes);
-app.use("/api/test", testRoutes);
-app.use("/api/test-result", testResultRoutes);
+app.use("/api/teacher", teacherRoutes);   // teacher login is public; other /teacher/* routes protect themselves via requireTeacher
+
+// Protected routes (valid JWT required for all)
+app.use("/api/interview", requireAuth, interviewRoutes);
+app.use("/api/test", requireAuth, testRoutes);
+app.use("/api/test-result", requireAuth, testResultRoutes);
+app.use("/api/question", requireAuth, questionRoutes);
+
 app.use("/uploads", express.static("uploads"));
-app.use("/api/question", questionRoutes);
 
 // ---------------- Default Route ----------------
 app.get("/", (req, res) => {

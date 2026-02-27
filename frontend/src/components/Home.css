@@ -226,6 +226,17 @@
   color: #c7d2fe;
 }
 
+.h-dd-changepwd {
+  background: rgba(16,185,129,0.1);
+  color: #6ee7b7;
+  border: 1px solid rgba(16,185,129,0.2);
+}
+
+.h-dd-changepwd:hover {
+  background: rgba(16,185,129,0.22);
+  color: #a7f3d0;
+}
+
 .h-dd-logout {
   background: rgba(239,68,68,0.1);
   color: #fca5a5;
@@ -461,4 +472,299 @@
   }
 
   .h-dropdown { width: 260px; }
+}
+
+/* ── Change Password Modal ───────────────────────────────── */
+.h-cp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cpFadeIn 0.2s ease-out;
+}
+@keyframes cpFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.h-cp-modal {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(17,24,39,0.95);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px;
+  padding: 28px 30px 26px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: cpSlideIn 0.25s ease-out;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+@keyframes cpSlideIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.h-cp-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.h-cp-icon {
+  width: 40px; height: 40px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(16,185,129,0.4);
+}
+
+.h-cp-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  flex: 1;
+  letter-spacing: -0.3px;
+}
+
+.h-cp-close {
+  background: none; border: none;
+  color: rgba(255,255,255,0.35);
+  font-size: 1rem; cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+  display: flex; align-items: center;
+}
+.h-cp-close:hover { color: rgba(255,255,255,0.75); }
+
+.h-cp-alert {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.83rem; font-weight: 500;
+  margin-bottom: 16px;
+}
+.h-cp-alert-error   { background:rgba(239,68,68,0.12);  border:1px solid rgba(239,68,68,0.25);  color:#fca5a5; }
+.h-cp-alert-success { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); color:#6ee7b7; }
+
+.h-cp-form { display: flex; flex-direction: column; gap: 14px; }
+
+.h-cp-group { display: flex; flex-direction: column; gap: 5px; }
+
+.h-cp-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.h-cp-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.h-cp-input::placeholder { color: rgba(255,255,255,0.22); }
+.h-cp-input:focus {
+  border-color: #10b981;
+  background: rgba(16,185,129,0.07);
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
+}
+
+.h-cp-submit {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  color: #fff;
+  font-size: 0.92rem; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 18px rgba(16,185,129,0.35);
+  margin-top: 4px;
+}
+.h-cp-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(16,185,129,0.5);
+}
+.h-cp-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.h-cp-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Icon colour variants for fp modes */
+.h-cp-icon-key   { background: linear-gradient(135deg, #f59e0b, #ef4444) !important; box-shadow: 0 0 20px rgba(245,158,11,0.4) !important; }
+.h-cp-icon-otp   { background: linear-gradient(135deg, #6366f1, #06b6d4) !important; box-shadow: 0 0 20px rgba(6,182,212,0.4) !important; }
+.h-cp-icon-reset { background: linear-gradient(135deg, #8b5cf6, #06b6d4) !important; box-shadow: 0 0 20px rgba(139,92,246,0.4) !important; }
+
+/* "Forgot your password?" link at bottom of change-pwd form */
+.h-cp-fp-link {
+  background: none; border: none; padding: 0;
+  color: rgba(139,92,246,0.8);
+  font-size: 0.8rem; font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  margin-top: 2px;
+  transition: color 0.2s;
+}
+.h-cp-fp-link:hover { color: #a78bfa; }
+
+/* Subtitle for fp steps */
+.h-cp-fp-sub {
+  font-size: 0.83rem;
+  color: rgba(255,255,255,0.45);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+/* Masked email highlight */
+.h-cp-masked-email {
+  color: #a5b4fc;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+/* OTP boxes */
+.h-cp-otp-boxes {
+  display: flex;
+  gap: 9px;
+  justify-content: center;
+  margin: 4px 0 18px;
+}
+.h-cp-otp-box {
+  width: 44px; height: 50px;
+  border-radius: 11px;
+  border: 1.5px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 1.4rem; font-weight: 800;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  caret-color: #8b5cf6;
+}
+.h-cp-otp-box:focus {
+  border-color: #8b5cf6;
+  background: rgba(139,92,246,0.1);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.18);
+}
+.h-cp-otp-box-filled {
+  border-color: rgba(139,92,246,0.45);
+  background: rgba(139,92,246,0.1);
+  color: #c4b5fd;
+}
+
+/* Resend row */
+.h-cp-resend-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin: 10px 0 6px;
+}
+.h-cp-resend-label { font-size: 0.8rem; color: rgba(255,255,255,0.35); }
+.h-cp-resend-btn {
+  background: none; border: none; padding: 0;
+  color: #a5b4fc; font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; transition: color 0.2s;
+}
+.h-cp-resend-btn:hover:not(.h-cp-resend-disabled) { color: #c4b5fd; }
+.h-cp-resend-disabled { color: rgba(255,255,255,0.25) !important; cursor: not-allowed; }
+
+/* Back button */
+.h-cp-back-btn {
+  background: none; border: none;
+  color: rgba(255,255,255,0.3);
+  font-size: 0.78rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 0; margin: 8px auto 0;
+  transition: color 0.2s; width: 100%;
+}
+.h-cp-back-btn:hover { color: rgba(255,255,255,0.65); }
+
+/* Indigo/purple submit variant for fp steps */
+.h-cp-submit-fp {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  box-shadow: 0 4px 18px rgba(99,102,241,0.35) !important;
+}
+.h-cp-submit-fp:hover:not(:disabled) {
+  box-shadow: 0 8px 26px rgba(99,102,241,0.5) !important;
+}
+
+/* ── Password hints — floating panel to the right of modal ── */
+.h-cp-pwd-wrap { position: relative; }
+
+.h-cp-hints {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 0;
+  width: 210px;
+  list-style: none;
+  margin: 0;
+  padding: 12px 14px;
+  background: rgba(9,11,28,0.97);
+  border: 1px solid rgba(16,185,129,0.35);
+  border-radius: 13px;
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+  animation: cpHintsIn 0.18s ease-out;
+}
+@keyframes cpHintsIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.h-cp-hints::before {
+  content: "";
+  position: absolute;
+  right: 100%; top: 14px;
+  border: 7px solid transparent;
+  border-right-color: rgba(16,185,129,0.35);
+}
+.h-cp-hints::after {
+  content: "";
+  position: absolute;
+  right: calc(100% - 1px); top: 15px;
+  border: 6px solid transparent;
+  border-right-color: rgba(9,11,28,0.97);
+}
+.h-cp-hints li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 0.75rem; font-weight: 500;
+  transition: color 0.2s;
+  line-height: 1.35;
+}
+.h-cp-hint-met   { color: #6ee7b7; }
+.h-cp-hint-unmet { color: rgba(255,255,255,0.38); }
+
+@media (max-width: 720px) {
+  .h-cp-hints {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    animation: none;
+  }
+  .h-cp-hints::before,
+  .h-cp-hints::after { display: none; }
 }

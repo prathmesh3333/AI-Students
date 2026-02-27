@@ -109,8 +109,7 @@ const fetchStudentQuestions = async () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("teacherName");
-    localStorage.removeItem("teacherEmail");
+    localStorage.clear();
     navigate("/login");
   };
 
