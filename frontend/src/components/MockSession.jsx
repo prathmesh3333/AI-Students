@@ -38,6 +38,7 @@ const MockSession = () => {
   const ttsRawBufferRef = useRef("");
   const streamingDoneRef = useRef(false);
   const voiceRef = useRef(null);
+  const abortControllerRef = useRef(null); // aborts active SSE fetch on skip
 
   // Pick the best available TTS voice
   useEffect(() => {
@@ -108,6 +109,8 @@ const MockSession = () => {
 
   // ── Buffer chunks → extract complete sentences → queue for TTS ──
   const addToTTSBuffer = (chunk) => {
+    // If user skipped (streamingDone=true but not from natural end), discard incoming chunks
+    if (streamingDoneRef.current) return;
     ttsRawBufferRef.current += chunk;
     const parts = ttsRawBufferRef.current.split(/(?<=[.!?])\s+/);
     ttsRawBufferRef.current = parts.pop() || "";
@@ -130,6 +133,12 @@ const MockSession = () => {
     userInputRef.current = "";
     setLoading(true);
 
+    // Abort any previous SSE stream still in flight
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     synthesisRef.current.cancel();
     ttsQueueRef.current = [];
     ttsSpeakingRef.current = false;
@@ -137,9 +146,14 @@ const MockSession = () => {
     streamingDoneRef.current = false;
 
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/interview/respond-stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        signal: abortControllerRef.current.signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           userMessage: answer,
           previousMessages: newMessages,
@@ -188,6 +202,8 @@ const MockSession = () => {
         }
       }
     } catch (error) {
+      // AbortError = user pressed Skip; silently ignore — stopSpeaking already handles state
+      if (error.name === "AbortError") return;
       console.error("Error fetching AI response:", error);
       setMessages((prev) => {
         const updated = [...prev];
@@ -360,11 +376,23 @@ const MockSession = () => {
   };
 
   const stopSpeaking = () => {
+    // Kill the SSE fetch stream immediately — prevents old chunks interfering
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     synthesisRef.current.cancel();
     ttsQueueRef.current = [];
+    ttsRawBufferRef.current = "";
     ttsSpeakingRef.current = false;
     streamingDoneRef.current = true;
     setIsSpeaking(false);
+    setLoading(false);
+    setTranscript("");
+    setUserInput("");
+    userInputRef.current = "";
+    setInterimTranscript("");
+    shouldAutoSendRef.current = false;
     setTimeout(() => {
       if (recognitionRef.current) {
         try { recognitionRef.current.start(); } catch (_) {}
@@ -375,10 +403,12 @@ const MockSession = () => {
   const handleEndInterview = async () => {
     try {
       setEnding(true);
-      const res = await axios.post("http://localhost:5000/api/interview/summary", {
-        messages,
-        role,
-      });
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        "http://localhost:5000/api/interview/summary",
+        { messages, role },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       navigate("/interview-summary", {
         state: {
           summary: res.data.summary,

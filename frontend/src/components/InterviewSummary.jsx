@@ -104,24 +104,29 @@ const InterviewSummary = () => {
         return;
       }
       const today = new Date().toISOString().split("T")[0];
-      await axios.post("http://localhost:5000/api/interview/save", {
-        rollNo,
-        studentName,
-        date: today,
-        role: interviewData?.role || "N/A",
-        experience: interviewData?.experience || "N/A",
-        confidence: parsedSummary.confidence,
-        nervousness: parsedSummary.nervousness,
-        weakAreas: parsedSummary.weakAreas,
-        strongAreas: parsedSummary.strongAreas,
-        focusAreas: [],
-        overallSummary: parsedSummary.overallSummary,
-        technicalScore: parsedSummary.technicalScore,
-        communicationScore: parsedSummary.communicationScore,
-        recommendation: parsedSummary.recommendation,
-        resumeText: interviewData?.resumeText || "",
-        messages: interviewData?.messages || [],
-      });
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "http://localhost:5000/api/interview/save",
+        {
+          rollNo,
+          studentName,
+          date: today,
+          role: interviewData?.role || "N/A",
+          experience: interviewData?.experience || "N/A",
+          confidence: parsedSummary.confidence,
+          nervousness: parsedSummary.nervousness,
+          weakAreas: parsedSummary.weakAreas,
+          strongAreas: parsedSummary.strongAreas,
+          focusAreas: [],
+          overallSummary: parsedSummary.overallSummary,
+          technicalScore: parsedSummary.technicalScore,
+          communicationScore: parsedSummary.communicationScore,
+          recommendation: parsedSummary.recommendation,
+          resumeText: interviewData?.resumeText || "",
+          messages: interviewData?.messages || [],
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setSaved(true);
     } catch (error) {
       console.error("Error saving interview:", error);

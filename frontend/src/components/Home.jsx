@@ -41,8 +41,20 @@ const Home = () => {
   const [fpConfirmPwd, setFpConfirmPwd]   = useState("");
   const [fpResendTimer, setFpResendTimer] = useState(0);
   const fpOtpRefs = useRef([]);
+  const notifWrapRef = useRef(null);
 
   const navigate = useNavigate();
+
+  // Close notification dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifWrapRef.current && !notifWrapRef.current.contains(e.target)) {
+        setShowNotifs(false);
+      }
+    };
+    if (showNotifs) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showNotifs]);
 
   const hour = new Date().getHours();
   const greeting =
@@ -297,9 +309,9 @@ const Home = () => {
 
         <div className="h-nav-right">
           {/* Notification Bell */}
-          <div className="h-notif-wrap">
+          <div className="h-notif-wrap" ref={notifWrapRef}>
             <button
-              className="h-notif-btn"
+              className={`h-notif-btn ${showNotifs ? "h-notif-btn-active" : ""}`}
               onClick={() => { setShowNotifs(!showNotifs); setShowDropdown(false); }}
               title="Notifications"
             >
@@ -310,31 +322,57 @@ const Home = () => {
             </button>
 
             {showNotifs && (
-              <>
-                <div className="h-backdrop" onClick={() => setShowNotifs(false)} />
-                <div className="h-notif-dropdown">
-                  <div className="h-notif-header">
-                    <i className="bi bi-bell-fill me-2" />
-                    Tests Due Today
+              <div className="h-notif-dropdown">
+                {/* Header */}
+                <div className="h-notif-header">
+                  <div className="h-notif-header-left">
+                    <div className="h-notif-header-icon">
+                      <i className="bi bi-bell-fill" />
+                    </div>
+                    <div>
+                      <div className="h-notif-header-title">Due Today</div>
+                      <div className="h-notif-header-sub">
+                        {todayTests.length > 0
+                          ? `${todayTests.length} test${todayTests.length > 1 ? "s" : ""} pending`
+                          : "You're all clear"}
+                      </div>
+                    </div>
                   </div>
+                  <button className="h-notif-close" onClick={() => setShowNotifs(false)}>
+                    <i className="bi bi-x" />
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="h-notif-body">
                   {todayTests.length === 0 ? (
                     <div className="h-notif-empty">
-                      <i className="bi bi-check-circle me-2" />
-                      No tests due today
+                      <div className="h-notif-empty-icon">
+                        <i className="bi bi-check2-circle" />
+                      </div>
+                      <div className="h-notif-empty-text">No tests due today</div>
+                      <div className="h-notif-empty-sub">Enjoy your day!</div>
                     </div>
                   ) : (
                     todayTests.map(test => (
                       <div key={test._id} className="h-notif-item">
-                        <div className="h-notif-item-title">{test.title}</div>
-                        <div className="h-notif-item-meta">
-                          <span>{test.subject}</span>
-                          <span className="h-notif-due">Due Today</span>
+                        <div className="h-notif-item-left">
+                          <i className="bi bi-journal-text h-notif-item-icon" />
+                        </div>
+                        <div className="h-notif-item-content">
+                          <div className="h-notif-item-title">{test.title}</div>
+                          <div className="h-notif-item-meta">
+                            {test.subject && <span className="h-notif-subject">{test.subject}</span>}
+                            <span className="h-notif-due">
+                              <i className="bi bi-clock-fill me-1" />Due Today
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))
                   )}
                 </div>
-              </>
+              </div>
             )}
           </div>
 

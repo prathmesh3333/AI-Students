@@ -51,10 +51,11 @@ const StartMockInterview = () => {
       const formDataUpload = new FormData();
       formDataUpload.append("resume", file);
 
+      const token = localStorage.getItem("token");
       const response = await axios.post(
         "http://localhost:5000/api/interview/parse-resume",
         formDataUpload,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
@@ -87,10 +88,11 @@ const StartMockInterview = () => {
     try {
       setLoading(true);
 
+      const token = localStorage.getItem("token");
       const res = await axios.post(
         "http://localhost:5000/api/interview/start",
         { ...formData, resumeText },
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
       );
 
       navigate("/mock-session", {

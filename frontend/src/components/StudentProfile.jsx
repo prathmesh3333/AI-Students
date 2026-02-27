@@ -131,7 +131,8 @@ setPendingTests(pending);
 
       // Fetch student's interviews
       try {
-        const interviewsResponse = await axios.get(`http://localhost:5000/api/interview/student/${rollNo}`);
+        const token = localStorage.getItem("token");
+        const interviewsResponse = await axios.get(`http://localhost:5000/api/interview/student/${rollNo}`, { headers: { Authorization: `Bearer ${token}` } });
         if (interviewsResponse.data && interviewsResponse.data.success) {
           setInterviews(interviewsResponse.data.interviews);
         }

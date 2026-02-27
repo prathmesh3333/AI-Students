@@ -416,6 +416,99 @@
   box-shadow: 0 6px 20px rgba(99,102,241,0.55) !important;
 }
 
+/* ── React Carousel ── */
+.mid-carousel {
+  position: relative;
+}
+
+/* Clips the sliding track — only one page visible at a time */
+.mid-carousel-viewport {
+  overflow: hidden;
+  width: 100%;
+  border-radius: 12px;
+}
+
+/* All slide-groups sit side-by-side; translateX drives the slide */
+.mid-carousel-track {
+  display: flex;
+  transition: transform 0.75s cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+}
+
+/* Each page of cards */
+.mid-slide-group {
+  min-width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px 16px 16px;
+}
+
+/* Cards stretch to fill available space evenly */
+.mid-slide-group .interview-card {
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+  width: auto !important;
+}
+
+.mid-carousel-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 0 16px;
+}
+
+.mid-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.7);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  flex-shrink: 0;
+}
+.mid-nav-btn:hover:not(:disabled) {
+  background: rgba(99,102,241,0.2);
+  border-color: rgba(99,102,241,0.45);
+  color: #a5b4fc;
+  transform: scale(1.08);
+}
+.mid-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.mid-nav-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.mid-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mid-dot:hover { background: rgba(255,255,255,0.35); }
+.mid-dot-active {
+  background: #6366f1;
+  width: 20px;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(99,102,241,0.6);
+}
+
 /* Badges */
 .badge {
   border-radius: 8px !important;
@@ -449,20 +542,6 @@ p, span, li, div { color: inherit; }
   color: #c7d2fe !important;
 }
 
-/* Carousel */
-.carousel-control-prev, .carousel-control-next {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.08) !important;
-  border: 1px solid rgba(255,255,255,0.12);
-  top: 50%; transform: translateY(-50%);
-  position: absolute;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s;
-}
-.carousel-control-prev:hover, .carousel-control-next:hover {
-  background: rgba(255,255,255,0.16) !important;
-}
 
 /* Chart area */
 .chart-card, .card {

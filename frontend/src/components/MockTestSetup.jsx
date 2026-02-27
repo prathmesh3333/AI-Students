@@ -48,10 +48,11 @@ const MockTestSetup = () => {
       const fd = new FormData();
       fd.append("resume", file); // reusing the existing parse-resume endpoint
 
+      const token = localStorage.getItem("token");
       const res = await axios.post(
         "http://localhost:5000/api/interview/parse-resume",
         fd,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        { headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` } }
       );
 
       if (res.data.success) {
@@ -82,9 +83,11 @@ const MockTestSetup = () => {
     try {
       setLoading(true);
 
+      const token = localStorage.getItem("token");
       const res = await axios.post(
         "http://localhost:5000/api/interview/mock-test",
-        { branch, subject, difficulty, pdfText, numQuestions }
+        { branch, subject, difficulty, pdfText, numQuestions },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (res.data.success) {

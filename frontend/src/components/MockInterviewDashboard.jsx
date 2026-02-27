@@ -53,8 +53,10 @@ const MockInterviewDashboard = () => {
 
   const fetchInterviews = async (rollNo) => {
     try {
+      const token = localStorage.getItem("token");
       const response = await axios.get(
-        `http://localhost:5000/api/interview/user/${rollNo}`
+        `http://localhost:5000/api/interview/user/${rollNo}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.success) {
@@ -124,12 +126,15 @@ const MockInterviewDashboard = () => {
     return chunks;
   };
 
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [chunkSize, setChunkSize] = useState(3);
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) setChunkSize(1);
-      else if (window.innerWidth < 992) setChunkSize(2);
-      else setChunkSize(3);
+      if (window.innerWidth < 576) setChunkSize(1);
+      else if (window.innerWidth < 850) setChunkSize(2);
+      else if (window.innerWidth < 1100) setChunkSize(3);
+      else if (window.innerWidth < 1400) setChunkSize(4);
+      else setChunkSize(5);
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -148,8 +153,12 @@ const MockInterviewDashboard = () => {
   );
 });
 
-  // const slides = chunkArray(interviews, chunkSize);
-const slides = chunkArray(filteredInterviews, chunkSize);
+  const slides = chunkArray(filteredInterviews, chunkSize);
+  // Clamp currentSlide whenever slides length changes
+  const safeSlide = Math.min(currentSlide, Math.max(0, slides.length - 1));
+
+  const goPrev = () => setCurrentSlide((s) => Math.max(0, s - 1));
+  const goNext = () => setCurrentSlide((s) => Math.min(slides.length - 1, s + 1));
 
   return (
     <div className="mock-dashboard-wrapper">
@@ -242,19 +251,15 @@ const slides = chunkArray(filteredInterviews, chunkSize);
 
         {/* Carousel */}
         {interviews.length > 0 ? (
-          <div
-            id="interviewCarousel"
-            className="carousel slide mb-4"
-            data-bs-ride="carousel"
-          >
-            <div className="carousel-inner">
-              {slides.map((slide, idx) => (
-                <div
-                  className={`carousel-item ${idx === 0 ? "active" : ""}`}
-                  key={idx}
-                >
-                  <div className="d-flex justify-content-center gap-3 flex-wrap">
-                    {slide.map((interview) => {
+          <div className="mid-carousel mb-4">
+            <div className="mid-carousel-viewport">
+              <div
+                className="mid-carousel-track"
+                style={{ transform: `translateX(-${safeSlide * 100}%)` }}
+              >
+                {slides.map((slideGroup, slideIdx) => (
+                  <div key={slideIdx} className="mid-slide-group">
+                    {slideGroup.map((interview) => {
                       // Extract only first word from confidence/nervousness (handle long text)
                       const confidenceLevel = interview.confidence?.split('.')[0].split(' ')[0] || 'N/A';
                       const nervousnessLevel = interview.nervousness?.split('.')[0].split(' ')[0] || 'N/A';
@@ -379,35 +384,36 @@ const slides = chunkArray(filteredInterviews, chunkSize);
                       );
                     })}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            {/* Carousel Controls */}
-            <button
-              className="carousel-control-prev"
-              type="button"
-              data-bs-target="#interviewCarousel"
-              data-bs-slide="prev"
-            >
-              <span
-                className="carousel-control-prev-icon"
-                aria-hidden="true"
-              ></span>
-              <span className="visually-hidden">Previous</span>
-            </button>
-            <button
-              className="carousel-control-next"
-              type="button"
-              data-bs-target="#interviewCarousel"
-              data-bs-slide="next"
-            >
-              <span
-                className="carousel-control-next-icon"
-                aria-hidden="true"
-              ></span>
-              <span className="visually-hidden">Next</span>
-            </button>
+            {/* React-controlled nav */}
+            <div className="mid-carousel-nav">
+              <button
+                className="mid-nav-btn"
+                onClick={goPrev}
+                disabled={safeSlide === 0}
+              >
+                <i className="bi bi-chevron-left" />
+              </button>
+              <span className="mid-nav-dots">
+                {slides.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`mid-dot ${i === safeSlide ? "mid-dot-active" : ""}`}
+                    onClick={() => setCurrentSlide(i)}
+                  />
+                ))}
+              </span>
+              <button
+                className="mid-nav-btn"
+                onClick={goNext}
+                disabled={safeSlide === slides.length - 1}
+              >
+                <i className="bi bi-chevron-right" />
+              </button>
+            </div>
           </div>
         ) : (
           <p className="text-center">No mock interviews yet.</p>
