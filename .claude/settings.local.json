@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -lh \"C:\\\\Users\\\\sagar\\\\desktop\\\\AI-\\\\frontend\\\\src\\\\components\"/*.jsx \"C:\\\\Users\\\\sagar\\\\desktop\\\\AI-\\\\frontend\\\\src\\\\components\"/*.css)"
+    ]
+  }
+}

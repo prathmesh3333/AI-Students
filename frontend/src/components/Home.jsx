@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
 import "./Home.css";
 
 const Home = () => {
@@ -9,6 +8,10 @@ const Home = () => {
   const [rollNo, setRollNo] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
+
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   useEffect(() => {
     const storedName = localStorage.getItem("studentName");
@@ -30,58 +33,94 @@ const Home = () => {
     navigate("/login");
   };
 
+  const features = [
+    {
+      to: "/test-selection",
+      icon: "bi-journal-check",
+      label: "Start Test",
+      desc: "Take scheduled tests, attempt MCQs and track your academic progress.",
+      accent: "#6366f1",
+      glow: "rgba(99,102,241,0.35)",
+      tag: "Academics",
+    },
+    {
+      to: "/mock-interview",
+      icon: "bi-mic-fill",
+      label: "Mock Interview",
+      desc: "Practice AI-powered voice interviews and get real-time feedback.",
+      accent: "#a855f7",
+      glow: "rgba(168,85,247,0.35)",
+      tag: "Career",
+    },
+    {
+      to: "/question-mode",
+      icon: "bi-layers-fill",
+      label: "Question Bank",
+      desc: "Practice subject-wise questions and strengthen your concepts.",
+      accent: "#06b6d4",
+      glow: "rgba(6,182,212,0.35)",
+      tag: "Practice",
+    },
+  ];
+
   return (
-    <div className="home-wrapper">
-      {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-dark navbar-custom px-4">
-        <h3 className="navbar-brand fw-bold mb-0">Student Dashboard</h3>
-        <div className="ms-auto profile-dropdown-container">
+    <div className="h-page">
+      {/* Animated background blobs */}
+      <div className="h-bg" aria-hidden>
+        <div className="h-blob h-blob-1" />
+        <div className="h-blob h-blob-2" />
+        <div className="h-blob h-blob-3" />
+      </div>
+
+      {/* ── Navbar ── */}
+      <nav className="h-nav">
+        <div className="h-nav-brand">
+          <div className="h-nav-logo">E</div>
+          <span className="h-nav-name">EduPrep</span>
+        </div>
+
+        <div className="h-nav-right">
           <button
-            className="profile-icon-btn"
+            className="h-avatar-btn"
             onClick={() => setShowDropdown(!showDropdown)}
+            title="Profile"
           >
-            <i className="bi bi-person-circle"></i>
+            {studentName.charAt(0).toUpperCase()}
           </button>
 
           {showDropdown && (
             <>
-              <div className="dropdown-backdrop" onClick={() => setShowDropdown(false)}></div>
-              <div className="profile-dropdown">
-                <div className="dropdown-header">
-                  <div className="dropdown-avatar">
+              <div className="h-backdrop" onClick={() => setShowDropdown(false)} />
+              <div className="h-dropdown">
+                <div className="h-dd-header">
+                  <div className="h-dd-avatar">
                     {studentName.charAt(0).toUpperCase()}
                   </div>
-                  <div className="dropdown-info">
-                    <div className="dropdown-name">{studentName}</div>
-                    <div className="dropdown-detail">
-                      <i className="bi bi-building me-1"></i>
+                  <div className="h-dd-info">
+                    <p className="h-dd-name">{studentName}</p>
+                    <p className="h-dd-meta">
+                      <i className="bi bi-building me-1" />
                       {studentBranch}
-                    </div>
-                    <div className="dropdown-detail">
-                      <i className="bi bi-person-badge me-1"></i>
+                    </p>
+                    <p className="h-dd-meta">
+                      <i className="bi bi-person-badge me-1" />
                       {rollNo}
-                    </div>
+                    </p>
                   </div>
                 </div>
-                <div className="dropdown-actions">
+                <div className="h-dd-actions">
                   <button
-                    className="dropdown-btn view-profile-btn"
-                    onClick={() => {
-                      setShowDropdown(false);
-                      navigate(`/student-profile/${rollNo}`);
-                    }}
+                    className="h-dd-btn h-dd-profile"
+                    onClick={() => { setShowDropdown(false); navigate(`/student-profile/${rollNo}`); }}
                   >
-                    <i className="bi bi-eye me-2"></i>
+                    <i className="bi bi-person-lines-fill" />
                     View Profile
                   </button>
                   <button
-                    className="dropdown-btn logout-btn"
-                    onClick={() => {
-                      setShowDropdown(false);
-                      handleLogout();
-                    }}
+                    className="h-dd-btn h-dd-logout"
+                    onClick={() => { setShowDropdown(false); handleLogout(); }}
                   >
-                    <i className="bi bi-box-arrow-right me-2"></i>
+                    <i className="bi bi-box-arrow-right" />
                     Logout
                   </button>
                 </div>
@@ -91,48 +130,40 @@ const Home = () => {
         </div>
       </nav>
 
-      {/* Main Options */}
-      <div className="container d-flex flex-column justify-content-center align-items-center flex-grow-1 landing-container">
-        <h2 className="fw-bold my-5 text-center landing-title">
-          Choose Your Path
-        </h2>
-
-        <div className="d-flex flex-row gap-5 justify-content-center options-container">
-
-          {/* Start Test */}
-          <Link to="/test-selection" className="option-card option-card-primary">
-            <div className="option-icon">
-              <i className="bi bi-pencil-square"></i>
-            </div>
-            <h4 className="option-title">Start Test</h4>
-            <p className="option-desc">Take scheduled tests and track your progress.</p>
-          </Link>
-
-          {/* Start Mock Interview */}
-          <Link to="/mock-interview" className="option-card option-card-success">
-            <div className="option-icon">
-              <i className="bi bi-mic-fill"></i>
-            </div>
-            <h4 className="option-title">Start Mock Interview</h4>
-            <p className="option-desc">Practice AI-based mock interviews and improve skills.</p>
-          </Link>
-          <Link to="/question-mode" className="option-card option-card-warning">
-          <div className="option-icon">
-      <i className="bi bi-question-circle-fill"></i>
-    </div>
-    <h4 className="option-title">Question Module</h4>
-    <p className="option-desc">
-      Practice subject-wise questions and improve concepts.
-    </p>
-  </Link>
-        </div>
+      {/* ── Hero ── */}
+      <div className="h-hero">
+        <span className="h-greeting-tag">{greeting} 👋</span>
+        <h1 className="h-hero-title">{studentName || "Student"}</h1>
+        <p className="h-hero-sub">
+          What would you like to work on today?
+        </p>
       </div>
 
-      {/* Footer */}
-      <footer className="footer-custom">
-        <p className="mb-0">
-          © {new Date().getFullYear()} Student Dashboard | All Rights Reserved
-        </p>
+      {/* ── Feature Cards ── */}
+      <div className="h-cards">
+        {features.map((f) => (
+          <Link
+            key={f.to}
+            to={f.to}
+            className="h-card"
+            style={{ "--accent": f.accent, "--glow": f.glow }}
+          >
+            <span className="h-card-tag">{f.tag}</span>
+            <div className="h-card-icon-wrap">
+              <i className={`bi ${f.icon} h-card-icon`} />
+            </div>
+            <h3 className="h-card-title">{f.label}</h3>
+            <p className="h-card-desc">{f.desc}</p>
+            <div className="h-card-arrow">
+              Explore <i className="bi bi-arrow-right ms-1" />
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* ── Footer ── */}
+      <footer className="h-footer">
+        © {new Date().getFullYear()} EduPrep · All Rights Reserved
       </footer>
     </div>
   );
