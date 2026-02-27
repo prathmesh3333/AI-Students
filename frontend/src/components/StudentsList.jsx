@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -10,6 +10,8 @@ const StudentsList = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const searchDebounce  = useRef(null);
+  const isSearchMounted = useRef(false);
 
   const navigate = useNavigate();
 
@@ -17,29 +19,32 @@ const StudentsList = () => {
 
   useEffect(() => {
     const name = localStorage.getItem("teacherName");
-    if (!name) {
-      navigate("/login");
-    } else {
-      setTeacherName(name);
-      fetchStudents();
-    }
+    if (!name) { navigate("/login"); return; }
+    setTeacherName(name);
+    fetchStudents("");
   }, [navigate]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (search) => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/auth/students");
-
+      const response = await axios.get(
+        `http://localhost:5000/api/auth/students?search=${encodeURIComponent(search)}`
+      );
       if (response.data && response.data.success) {
         setStudents(response.data.students);
       }
-
-      setLoading(false);
     } catch (error) {
       console.error("Error fetching students:", error);
+    } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isSearchMounted.current) { isSearchMounted.current = true; return; }
+    clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => fetchStudents(searchTerm), 300);
+  }, [searchTerm]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -50,17 +55,7 @@ const StudentsList = () => {
     navigate(`/student-profile/${rollNo}`);
   };
 
-  // Group students by branch
-  const getStudentsByBranch = (branch) => {
-    return students.filter(student => {
-      const matchesBranch = student.branch === branch;
-      const matchesSearch = searchTerm
-        ? student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.rollNo.toLowerCase().includes(searchTerm.toLowerCase())
-        : true;
-      return matchesBranch && matchesSearch;
-    });
-  };
+  const getStudentsByBranch = (branch) => students.filter(s => s.branch === branch);
 
   if (loading) {
     return (
@@ -77,11 +72,7 @@ const StudentsList = () => {
     );
   }
 
-  const totalStudents = students.filter(student => {
-    if (!searchTerm) return true;
-    return student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           student.rollNo.toLowerCase().includes(searchTerm.toLowerCase());
-  }).length;
+  const totalStudents = students.length;
 
   return (
     <div className="students-list-container">

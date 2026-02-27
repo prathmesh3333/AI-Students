@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -35,8 +35,13 @@ const StartTestDashboard = () => {
   const [pendingTests, setPendingTests] = useState([]);
   const [outdatedTests, setOutdatedTests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pendingSearch, setPendingSearch] = useState("");
+  const [pendingSearch, setPendingSearch]     = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
+  const pendingDebounce   = useRef(null);
+  const submittedDebounce = useRef(null);
+  const isPendingMounted   = useRef(false);
+  const isSubmittedMounted = useRef(false);
+  const rollNoRef          = useRef("");
 
 
 
@@ -52,6 +57,7 @@ const StartTestDashboard = () => {
     } else {
       setStudentName(name);
       setRollNo(roll);
+      rollNoRef.current = roll;
       setStudentBranch(branch || "N/A");
       fetchData(roll);
     }
@@ -127,6 +133,42 @@ const StartTestDashboard = () => {
     localStorage.clear();
     navigate("/login");
   };
+
+  const fetchPublishedTests = async (search) => {
+    try {
+      const studentBranch = localStorage.getItem("studentBranch");
+      const res = await axios.get(
+        `http://localhost:5000/api/test/published?branch=${studentBranch}&search=${encodeURIComponent(search)}`
+      );
+      if (res.data?.success) {
+        const submittedIds = submittedResults.map(r => r.testId?._id);
+        const pending = res.data.tests.filter(t => !submittedIds.includes(t._id));
+        splitAndSetPending(pending);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchSubmittedResults = async (search) => {
+    try {
+      const roll = rollNoRef.current;
+      const res = await axios.get(
+        `http://localhost:5000/api/test-result/student/${roll}?search=${encodeURIComponent(search)}`
+      );
+      if (res.data?.success) setSubmittedResults(res.data.results);
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (!isPendingMounted.current) { isPendingMounted.current = true; return; }
+    clearTimeout(pendingDebounce.current);
+    pendingDebounce.current = setTimeout(() => fetchPublishedTests(pendingSearch), 300);
+  }, [pendingSearch]);
+
+  useEffect(() => {
+    if (!isSubmittedMounted.current) { isSubmittedMounted.current = true; return; }
+    clearTimeout(submittedDebounce.current);
+    submittedDebounce.current = setTimeout(() => fetchSubmittedResults(submittedSearch), 300);
+  }, [submittedSearch]);
 
   const startTest = (testId) => {
     navigate("/pre-test-lobby", { state: { type: "academic", testId } });
@@ -364,12 +406,7 @@ const chartData = {
               ) : (
                 <div className="row g-4">
                   {/* {pendingTests.map((test) => ( */}
-                  {pendingTests
-                    .filter(test =>
-                        test.title.toLowerCase().includes(pendingSearch.toLowerCase()) ||
-                           test.subject.toLowerCase().includes(pendingSearch.toLowerCase())
-                              )
-                          .map((test) => (
+                  {pendingTests.map((test) => (
                     <div key={test._id} className="col-md-6 col-lg-4">
                       <div className="card shadow-sm p-4 hover-card test-card">
                         <div className="d-flex justify-content-between align-items-start mb-3">
@@ -482,13 +519,7 @@ const chartData = {
               ) : (
                 <div className="row g-4">
                   {/* {submittedResults.map((result) => ( */}
-                  {submittedResults
-  .filter(result =>
-    result.testId?.title
-      ?.toLowerCase()
-      .includes(submittedSearch.toLowerCase())
-  )
-  .map((result) => (
+                  {submittedResults.map((result) => (
 
                     <div key={result._id} className="col-md-6 col-lg-4">
                       <div className="card shadow-sm hover-card test-result-card">

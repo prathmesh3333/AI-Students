@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -8,53 +8,95 @@ import "./TestSpecificResults.css";
 const TestSpecificResults = () => {
   const { testId } = useParams();
   const [teacherName, setTeacherName] = useState("");
-  const [test, setTest] = useState(null);
+  const [test, setTest]       = useState(null);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState("date");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [sortBy, setSortBy]     = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [page, setPage]     = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0, averageScore: "0.00", highestScore: 0,
+    lowestScore: 0, passedCount: 0, failedCount: 0, passRate: "0.0",
+  });
 
   const navigate = useNavigate();
+  const listRef  = useRef(null);
+  const sortRef  = useRef({ sortBy: "date", sortOrder: "desc" });
 
+  // Keep sortRef in sync so scroll handler always sees latest sort
+  useEffect(() => { sortRef.current = { sortBy, sortOrder }; }, [sortBy, sortOrder]);
+
+  // ── Fetch a single page of results (appends if append=true) ──
+  const fetchResultsPage = async (pg, sb, so, append = false) => {
+    try {
+      if (append) setLoadingMore(true);
+      const res = await axios.get(
+        `http://localhost:5000/api/test-result/test/${testId}` +
+        `?page=${pg}&limit=10&sortBy=${sb}&sortOrder=${so}`
+      );
+      if (res.data?.success) {
+        setResults(prev => append ? [...prev, ...res.data.results] : res.data.results);
+        setStats(res.data.stats);
+        setHasMore(res.data.pagination.hasMore);
+      }
+    } catch (err) {
+      console.error("Error fetching results page:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // ── Initial load: test details + first page ──
   useEffect(() => {
     const name = localStorage.getItem("teacherName");
-    if (!name) {
-      navigate("/login");
-    } else {
-      setTeacherName(name);
-      fetchTestResults();
-    }
+    if (!name) { navigate("/login"); return; }
+    setTeacherName(name);
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [testRes] = await Promise.all([
+          axios.get(`http://localhost:5000/api/test/${testId}`),
+          fetchResultsPage(1, "date", "desc", false),
+        ]);
+        if (testRes.data?.success) setTest(testRes.data.test);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, [testId, navigate]);
 
-  const fetchTestResults = async () => {
-    try {
-      setLoading(true);
+  // ── Sort change: reset to page 1 and refetch ──
+  const isSortMounted = useRef(false);
+  useEffect(() => {
+    if (!isSortMounted.current) { isSortMounted.current = true; return; }
+    setPage(1);
+    setResults([]);
+    fetchResultsPage(1, sortBy, sortOrder, false);
+  }, [sortBy, sortOrder]);
 
-      // Fetch test details
-      const testResponse = await axios.get(`http://localhost:5000/api/test/${testId}`);
-
-      // Fetch results for this test
-      const resultsResponse = await axios.get(`http://localhost:5000/api/test-result/test/${testId}`);
-
-      if (testResponse.data && testResponse.data.success) {
-        setTest(testResponse.data.test);
+  // ── Scroll to bottom → fetch next page ──
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (!hasMore || loadingMore) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+        const next = page + 1;
+        setPage(next);
+        fetchResultsPage(next, sortRef.current.sortBy, sortRef.current.sortOrder, true);
       }
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [hasMore, loadingMore, page]);
 
-      if (resultsResponse.data && resultsResponse.data.success) {
-        setResults(resultsResponse.data.results);
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching test results:", error);
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
+  const handleLogout = () => { localStorage.clear(); navigate("/login"); };
 
   const toggleSort = (field) => {
     if (sortBy === field) {
@@ -63,26 +105,6 @@ const TestSpecificResults = () => {
       setSortBy(field);
       setSortOrder("desc");
     }
-  };
-
-  const getSortedResults = () => {
-    let sorted = [...results];
-
-    sorted.sort((a, b) => {
-      let comparison = 0;
-
-      if (sortBy === "date") {
-        comparison = new Date(b.submittedAt) - new Date(a.submittedAt);
-      } else if (sortBy === "score") {
-        comparison = b.score - a.score;
-      } else if (sortBy === "name") {
-        comparison = a.studentName.localeCompare(b.studentName);
-      }
-
-      return sortOrder === "asc" ? -comparison : comparison;
-    });
-
-    return sorted;
   };
 
   const formatDate = (dateString) => {
@@ -110,26 +132,25 @@ const TestSpecificResults = () => {
     return "score-poor";
   };
 
-  const sortedResults = getSortedResults();
+  const totalPages = Math.ceil(stats.total / 10);
 
-  // Calculate statistics
-  const stats = {
-    totalSubmissions: results.length,
-    averageScore: results.length > 0
-      ? (results.reduce((sum, r) => sum + r.score, 0) / results.length).toFixed(2)
-      : 0,
-    passedCount: results.filter(r => r.score >= 50).length,
-    failedCount: results.filter(r => r.score < 50).length,
-    highestScore: results.length > 0
-      ? Math.max(...results.map(r => r.score))
-      : 0,
-    lowestScore: results.length > 0
-      ? Math.min(...results.map(r => r.score))
-      : 0,
-    passRate: results.length > 0
-      ? ((results.filter(r => r.score >= 50).length / results.length) * 100).toFixed(1)
-      : 0
+  const jumpToPage = (pg) => {
+    setPage(pg);
+    setResults([]);
+    fetchResultsPage(pg, sortBy, sortOrder, false);
+    if (listRef.current) listRef.current.scrollTop = 0;
   };
+
+  const buildPageList = (cur, total) => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [1];
+    if (cur > 3) pages.push("…");
+    for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i);
+    if (cur < total - 2) pages.push("…");
+    pages.push(total);
+    return pages;
+  };
+
 
   if (loading) {
     return (
@@ -158,7 +179,7 @@ const TestSpecificResults = () => {
   }
 
   return (
-    <div className="test-specific-results-container">
+    <div className="test-specific-results-container tsr-locked">
       {/* Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark navbar-custom px-4">
         <h3 className="navbar-brand fw-bold mb-0">
@@ -181,42 +202,30 @@ const TestSpecificResults = () => {
         </div>
       </nav>
 
-      <div className="container-fluid py-4">
+      <div className="container-fluid py-4" id="tsr-main">
         {/* Test Information Card */}
-        <div className="card shadow-sm mb-4">
-          <div className="card-body">
-            <div className="row align-items-center">
-              <div className="col-md-8">
-                <h3 className="mb-2" style={{color: '#004b8d', fontWeight: '700'}}>
-                  {test.title}
-                </h3>
-                <p className="text-muted mb-3">{test.description}</p>
-                <div className="d-flex flex-wrap gap-2">
-                  <span className="badge bg-info">{test.subject}</span>
-                  <span className="badge bg-dark">
-                    <i className="bi bi-building me-1"></i>
-                    {test.branch}
-                  </span>
-                  <span className="badge bg-secondary">{test.totalQuestions} Questions</span>
-                  <span className="badge bg-primary">
-                    <i className="bi bi-clock me-1"></i>
-                    {test.timeLimit} mins
-                  </span>
-                </div>
+        <div className="card shadow-sm mb-2" id="tsr-info-card">
+          <div className="tsr-info-inner">
+            <div className="tsr-info-left">
+              <span className="tsr-test-title">{test.title}</span>
+              {test.description && <span className="tsr-test-desc">{test.description}</span>}
+              <div className="d-flex flex-wrap gap-1 align-items-center">
+                <span className="badge bg-info">{test.subject}</span>
+                <span className="badge bg-dark"><i className="bi bi-building me-1"></i>{test.branch}</span>
+                <span className="badge bg-secondary">{test.totalQuestions} Questions</span>
+                <span className="badge bg-primary"><i className="bi bi-clock me-1"></i>{test.timeLimit} mins</span>
               </div>
-              <div className="col-md-4 text-end">
-                <div className="test-status-badge">
-                  <i className="bi bi-people-fill me-2"></i>
-                  <span className="fs-2 fw-bold">{results.length}</span>
-                  <p className="mb-0 text-muted">Students Attempted</p>
-                </div>
-              </div>
+            </div>
+            <div className="tsr-info-right">
+              <i className="bi bi-people-fill tsr-people-icon"></i>
+              <span className="tsr-attempted-num">{stats.total}</span>
+              <span className="tsr-attempted-lbl">Students Attempted</span>
             </div>
           </div>
         </div>
 
         {/* Statistics Cards */}
-        <div className="row g-3 mb-4">
+        <div className="row g-2 mb-2">
           <div className="col-md-3">
             <div className="stat-card">
               <div className="stat-icon average">
@@ -269,8 +278,8 @@ const TestSpecificResults = () => {
         </div>
 
         {/* Results Table */}
-        <div className="card shadow-sm">
-          <div className="card-header bg-white py-3">
+        <div className="card shadow-sm" id="tsr-results-card">
+          <div className="card-header py-3">
             <h5 className="mb-0">
               <i className="bi bi-table me-2"></i>
               Student Submissions
@@ -278,13 +287,14 @@ const TestSpecificResults = () => {
           </div>
 
           <div className="card-body p-0">
-            {sortedResults.length === 0 ? (
+            {results.length === 0 ? (
               <div className="text-center py-5">
                 <i className="bi bi-inbox" style={{fontSize: '3rem', color: '#ccc'}}></i>
                 <p className="text-muted mt-3">No submissions yet for this test</p>
               </div>
             ) : (
-              <div className="table-responsive">
+              <div className="table-responsive" ref={listRef} id="tsr-table-wrap">
+
                 <table className="table table-hover mb-0">
                   <thead>
                     <tr>
@@ -324,9 +334,9 @@ const TestSpecificResults = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedResults.map((result, index) => (
+                    {results.map((result, idx) => (
                       <tr key={result._id}>
-                        <td>{index + 1}</td>
+                        <td>{idx + 1}</td>
                         <td className="fw-semibold">{result.studentName}</td>
                         <td>{result.rollNo}</td>
                         <td>
@@ -363,6 +373,28 @@ const TestSpecificResults = () => {
                     ))}
                   </tbody>
                 </table>
+                {loadingMore && (
+                  <div className="tsr-load-more">
+                    <span className="tsr-load-dot" /><span className="tsr-load-dot" /><span className="tsr-load-dot" />
+                  </div>
+                )}
+              </div>
+            )}
+            {totalPages > 1 && (
+              <div className="tsr-pagination">
+                {buildPageList(page, totalPages).map((p, i) =>
+                  p === "…" ? (
+                    <span key={`e${i}`} className="tsr-page-ellipsis">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      className={`tsr-page-btn${p === page ? " active" : ""}`}
+                      onClick={() => jumpToPage(p)}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>

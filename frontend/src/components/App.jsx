@@ -34,7 +34,6 @@ import TeacherDashboard from "./TeacherDashboard";
 // ✅ Test-related imports
 import TakeTest from "./TakeTest";
 import TestResultPage from "./TestResultPage";
-import TestResultsView from "./TestResultsView";
 import TestSpecificResults from "./TestSpecificResults";
 import StudentProfile from "./StudentProfile";
 import StudentsList from "./StudentsList";
@@ -75,7 +74,6 @@ function App() {
 
         {/* ── Teacher-only routes ─────────────────────────────────── */}
         <Route path="/teacher-dashboard" element={<ProtectedRoute teacherOnly><TeacherDashboard /></ProtectedRoute>} />
-        <Route path="/test-results-view" element={<ProtectedRoute teacherOnly><TestResultsView /></ProtectedRoute>} />
         <Route path="/test-results/:testId" element={<ProtectedRoute teacherOnly><TestSpecificResults /></ProtectedRoute>} />
         <Route path="/students-list" element={<ProtectedRoute teacherOnly><StudentsList /></ProtectedRoute>} />
         <Route path="/student-profile/:rollNo" element={<ProtectedRoute teacherOnly><StudentProfile /></ProtectedRoute>} />

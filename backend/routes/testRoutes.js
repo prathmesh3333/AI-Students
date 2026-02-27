@@ -194,6 +194,7 @@
 const express = require("express");
 const router = express.Router();
 const Test = require("../models/Test");
+const TestResult = require("../models/TestResult");
 const multer = require("multer");
 const path = require("path");
 const pdfParse = require("pdf-parse");
@@ -412,27 +413,59 @@ router.put("/publish/:id", async (req, res) => {
 ================================ */
 router.get("/all", async (req, res) => {
   try {
-    const tests = await Test.find().sort({ createdAt: -1 });
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(50, parseInt(req.query.limit) || 10);
+    const skip   = (page - 1) * limit;
+    const search = req.query.search || "";
+
+    const filter = {};
+    if (search) {
+      filter.$or = [
+        { title:   { $regex: search, $options: "i" } },
+        { subject: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [tests, total] = await Promise.all([
+      Test.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Test.countDocuments(filter),
+    ]);
+
+    // Aggregate submission counts only for the fetched tests
+    const testIds = tests.map((t) => t._id);
+    const counts = await TestResult.aggregate([
+      { $match: { testId: { $in: testIds } } },
+      { $group: { _id: "$testId", count: { $sum: 1 } } },
+    ]);
+    const countMap = {};
+    counts.forEach((c) => { countMap[c._id.toString()] = c.count; });
+
+    const testsWithCount = tests.map((t) => ({
+      ...t.toObject(),
+      submissionCount: countMap[t._id.toString()] || 0,
+    }));
 
     res.json({
       success: true,
-      tests,
+      tests: testsWithCount,
+      pagination: { page, limit, total, hasMore: page * limit < total },
     });
   } catch (error) {
     console.error("Error fetching tests:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch tests",
-    });
+    res.status(500).json({ success: false, error: "Failed to fetch tests" });
   }
 });
 router.get("/published", async (req, res) => {
   try {
-    const { branch } = req.query;
+    const { branch, search } = req.query;
 
     const filter = { isPublished: true };
-    if (branch) {
-      filter.branches = { $in: [branch] };
+    if (branch) filter.branches = { $in: [branch] };
+    if (search) {
+      filter.$or = [
+        { title:   { $regex: search, $options: "i" } },
+        { subject: { $regex: search, $options: "i" } },
+      ];
     }
 
     const tests = await Test.find(filter)

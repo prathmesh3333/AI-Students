@@ -70,16 +70,14 @@ router.get("/branches", async (req, res) => {
 router.get("/companies/:branch", async (req, res) => {
   try {
     const { branch } = req.params;
+    const search = req.query.search || "";
 
-    // Get unique companies for this branch
+    const matchStage = { branch: decodeURIComponent(branch) };
+    if (search) matchStage.company = { $regex: search, $options: "i" };
+
     const companies = await Question.aggregate([
-      { $match: { branch: decodeURIComponent(branch) } },
-      {
-        $group: {
-          _id: "$company",
-          questionCount: { $sum: 1 }
-        }
-      },
+      { $match: matchStage },
+      { $group: { _id: "$company", questionCount: { $sum: 1 } } },
       { $sort: { _id: 1 } }
     ]);
 

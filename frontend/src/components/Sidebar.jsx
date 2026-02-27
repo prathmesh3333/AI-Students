@@ -37,7 +37,6 @@ const teacherSections = [
     title: "Management",
     links: [
       { icon: "bi-speedometer2",    label: "Dashboard",      path: "/teacher-dashboard" },
-      { icon: "bi-clipboard-data",  label: "Test Results",   path: "/test-results-view" },
       { icon: "bi-people-fill",     label: "Students",       path: "/students-list" },
     ],
   },

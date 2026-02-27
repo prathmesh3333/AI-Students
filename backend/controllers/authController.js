@@ -173,7 +173,16 @@ const getStudent = async (req, res) => {
 // ---------------- Get All Students ----------------
 const getAllStudents = async (req, res) => {
   try {
-    const students = await FormDataModel.find().select("-password").sort({ name: 1 });
+    const search = req.query.search || "";
+    const filter = {};
+    if (search) {
+      filter.$or = [
+        { name:   { $regex: search, $options: "i" } },
+        { rollNo: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const students = await FormDataModel.find(filter).select("-password").sort({ name: 1 });
 
     res.json({
       success: true,

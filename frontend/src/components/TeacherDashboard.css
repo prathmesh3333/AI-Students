@@ -9,6 +9,135 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   position: relative; overflow-x: hidden;
 }
+/* Locked layout — no page scroll, list scrolls internally */
+.teacher-dashboard-wrapper.td-locked {
+  height: 100vh;
+  overflow: hidden;
+}
+#td-main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px !important;
+  padding-bottom: 6px !important;
+}
+#td-main > .row.mb-4 { flex-shrink: 0; }
+#td-list-card {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
+}
+#td-list-card > .card-header { flex-shrink: 0; }
+#td-list-card > .card-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  background: transparent !important;
+}
+#td-test-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  background: transparent !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99,102,241,0.3) transparent;
+}
+#td-test-list::-webkit-scrollbar { width: 4px; }
+#td-test-list::-webkit-scrollbar-thumb {
+  background: rgba(99,102,241,0.3);
+  border-radius: 4px;
+}
+/* Kill Bootstrap's white table background */
+#td-test-list .table,
+#td-test-list .table > :not(caption) > * > * {
+  --bs-table-bg: transparent;
+  background-color: transparent !important;
+  color: rgba(255,255,255,0.75) !important;
+}
+#td-test-list .table thead > tr > th {
+  background: rgba(99,102,241,0.14) !important;
+  color: rgba(255,255,255,0.6) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; padding: 12px 14px; white-space: nowrap;
+}
+#td-test-list .table tbody > tr:hover > * {
+  --bs-table-accent-bg: transparent;
+  background: rgba(99,102,241,0.07) !important;
+}
+#td-test-list .table tbody > tr > td {
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  vertical-align: middle; padding: 11px 14px;
+  color: rgba(255,255,255,0.75);
+}
+.td-row-desc {
+  font-size: 0.72rem; color: rgba(255,255,255,0.35);
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+}
+
+/* Load more indicator */
+.td-load-more {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 0 8px;
+}
+.td-load-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(99,102,241,0.5);
+  display: inline-block;
+  animation: tdDotPulse 1.2s ease-in-out infinite;
+}
+.td-load-dot:nth-child(2) { animation-delay: 0.2s; }
+.td-load-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes tdDotPulse {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40%           { transform: scale(1.1); opacity: 1; }
+}
+.td-end-label {
+  text-align: center;
+  padding: 16px 0 8px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.4px;
+}
+
+/* ── Pagination strip ── */
+.td-pagination {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
+  flex-wrap: wrap;
+}
+.td-page-btn {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6);
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  transition: all 0.18s;
+}
+.td-page-btn:hover { background: rgba(99,102,241,0.2); color: #fff; border-color: rgba(99,102,241,0.4); }
+.td-page-btn.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+.td-page-ellipsis { color: rgba(255,255,255,0.3); font-size: 0.82rem; padding: 0 2px; }
+
+/* Submissions count badge */
+.td-submissions-badge {
+  background: rgba(6,182,212,0.15) !important;
+  color: #67e8f9 !important;
+  border: 1px solid rgba(6,182,212,0.3) !important;
+}
 .teacher-dashboard-wrapper::before {
   content: "";
   position: fixed;

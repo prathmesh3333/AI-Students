@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -44,6 +44,14 @@ const TeacherDashboard = () => {
 
   const navigate = useNavigate();
 
+  // Backend-driven infinite scroll pagination
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore]   = useState(false);
+  const [page, setPage]         = useState(1);
+  const [total, setTotal]       = useState(0);
+  const listRef    = useRef(null);
+  const searchRef  = useRef("");
+
   // PDF-based test creation
   const [showMethodModal, setShowMethodModal] = useState(false);
   const [pdfDetails, setPdfDetails] = useState({
@@ -73,22 +81,26 @@ const TeacherDashboard = () => {
 
   useEffect(() => {
     const name = localStorage.getItem("teacherName");
-    if (!name) {
-      navigate("/login");
-    } else {
-      setTeacherName(name);
-      fetchTests();
-    }
+    if (!name) { navigate("/login"); return; }
+    setTeacherName(name);
+    fetchTestsPage(1, "", false);
   }, [navigate]);
 
-  const fetchTests = async () => {
+  const fetchTestsPage = async (pg, search, append = false) => {
     try {
-      const response = await axios.get("http://localhost:5000/api/test/all");
-      if (response.data.success) {
-        setTests(response.data.tests);
+      if (append) setLoadingMore(true);
+      const res = await axios.get(
+        `http://localhost:5000/api/test/all?page=${pg}&limit=10&search=${encodeURIComponent(search)}`
+      );
+      if (res.data?.success) {
+        setTests(prev => append ? [...prev, ...res.data.tests] : res.data.tests);
+        setTotal(res.data.pagination.total);
+        setHasMore(res.data.pagination.hasMore);
       }
-    } catch (error) {
-      console.error("Error fetching tests:", error);
+    } catch (err) {
+      console.error("Error fetching tests:", err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -280,7 +292,8 @@ const handlePublishTest = async () => {
         deadline: ""
       });
 
-      fetchTests();
+      setPage(1);
+      fetchTestsPage(1, searchRef.current, false);
     }
   } catch (error) {
     console.error("Publish error:", error);
@@ -296,7 +309,8 @@ const handlePublishTest = async () => {
           const response = await axios.delete(`http://localhost:5000/api/test/${id}`);
           if (response.data.success) {
             setToast({ message: "Test deleted successfully!", type: "success" });
-            fetchTests();
+            setPage(1);
+            fetchTestsPage(1, searchRef.current, false);
           }
         } catch (error) {
           console.error("Error deleting test:", error);
@@ -417,22 +431,69 @@ const handlePublishTest = async () => {
         await axios.put(`http://localhost:5000/api/test/publish/${res.data.test._id}`);
         setToast({ message: "PDF-based test published successfully!", type: "success" });
         resetPdfFlow();
-        fetchTests();
+        setPage(1);
+        fetchTestsPage(1, searchRef.current, false);
       }
     } catch (err) {
       setToast({ message: "Failed to publish test", type: "error" });
     }
   };
 
+  const totalPages = Math.ceil(total / 10);
+
+  const jumpToPage = (pg) => {
+    setPage(pg);
+    setTests([]);
+    fetchTestsPage(pg, searchRef.current, false);
+    if (listRef.current) listRef.current.scrollTop = 0;
+  };
+
+  const buildPageList = (cur, total) => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = [1];
+    if (cur > 3) pages.push("…");
+    for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i);
+    if (cur < total - 2) pages.push("…");
+    pages.push(total);
+    return pages;
+  };
+
   // Check if all questions are added
   const allQuestionsAdded = questionsList.length === testDetails.totalQuestions && testDetails.totalQuestions > 0;
-  const filteredTests = tests.filter((test) =>
-  test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  test.subject.toLowerCase().includes(searchTerm.toLowerCase())
-);
+
+  // Keep searchRef in sync so scroll handler always sees latest search
+  useEffect(() => { searchRef.current = searchTerm; }, [searchTerm]);
+
+  // Re-fetch from page 1 when search term changes (debounced, skips first mount)
+  const isSearchMounted = useRef(false);
+  const searchDebounce  = useRef(null);
+  useEffect(() => {
+    if (!isSearchMounted.current) { isSearchMounted.current = true; return; }
+    clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => {
+      setPage(1);
+      fetchTestsPage(1, searchTerm, false);
+    }, 300);
+  }, [searchTerm]);
+
+  // Scroll to bottom → fetch next page
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (!hasMore || loadingMore) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+        const next = page + 1;
+        setPage(next);
+        fetchTestsPage(next, searchRef.current, true);
+      }
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [hasMore, loadingMore, page]);
 
   return (
-    <div className="teacher-dashboard-wrapper">
+    <div className={`teacher-dashboard-wrapper${!creatingTest ? " td-locked" : ""}`}>
       {/* Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark navbar-custom px-4">
         <h3 className="navbar-brand fw-bold mb-0">
@@ -455,7 +516,7 @@ const handlePublishTest = async () => {
         </div>
       </nav>
 
-      <div className="container py-5">
+      <div className="container-fluid py-2" id="td-main">
         {/* Main Action - Create New Test */}
         {!creatingTest && (
           <>
@@ -472,84 +533,124 @@ const handlePublishTest = async () => {
             </div>
 
             {/* Existing Tests List */}
-            <div className="row">
-              <div className="col-12">
-                <div className="card shadow-sm p-4">
-                  <div className="mb-3">
-  <input
-    type="text"
-    className="form-control"
-    placeholder="Search by title or subject..."
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-  />
-</div>
-
-                  <h4 className="mb-3">
-                    <i className="bi bi-list-check me-2"></i>
-                    Published Tests
-                    <span className="badge bg-primary ms-2">{tests.length}</span>
-                  </h4>
-
-                  {tests.length === 0 ? (
-                    <p className="text-muted text-center py-4">
-                      <i className="bi bi-inbox me-2"></i>
-                      No tests created yet. Click "Create New Test" to get started.
-                    </p>
-                  ) : (
-                    <div className="test-list">
-                      {filteredTests.map((test) => (
-                        <div key={test._id} className="test-item">
-                          <div className="test-header">
-                            <div>
-                              <h5 className="mb-1">{test.title}</h5>
-                              <p className="text-muted mb-0">{test.description}</p>
-                            </div>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm btn-primary"
-                                onClick={() => navigate(`/test-results/${test._id}`)}
-                              >
-                                <i className="bi bi-bar-chart-fill me-1"></i>
-                                View Results
-                              </button>
-                              <button
-                                className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDeleteTest(test._id)}
-                              >
-                                <i className="bi bi-trash"></i>
-                              </button>
-                            </div>
-                          </div>
-                          <div className="test-meta">
-                            <span className="badge bg-info">{test.subject}</span>
-<span className="badge bg-dark">
-  <i className="bi bi-building me-1"></i>
-  {Array.isArray(test.branches)
-    ? test.branches.join(", ")
-    : test.branch}
-</span>
-
-                            <span className="badge bg-secondary">{test.totalQuestions} Questions</span>
-                            <span className="badge bg-primary">
-                              <i className="bi bi-clock me-1"></i>
-                              {test.timeLimit} mins
-                            </span>
-                            <span className={`badge ${test.isPublished ? 'bg-success' : 'bg-warning'}`}>
-                              {test.isPublished ? 'Published' : 'Draft'}
-                            </span>
-                            {test.deadline && (
-                              <span className="badge bg-warning text-dark">
-                                <i className="bi bi-calendar-event me-1"></i>
-                                Due: {new Date(test.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            <div className="card shadow-sm" id="td-list-card">
+              <div className="card-header py-3 d-flex align-items-center gap-3">
+                <h5 className="mb-0">
+                  <i className="bi bi-list-check me-2"></i>
+                  Published Tests
+                  <span className="badge bg-primary ms-2">{total}</span>
+                </h5>
+                <input
+                  type="text"
+                  className="form-control form-control-sm ms-auto"
+                  style={{maxWidth: "260px"}}
+                  placeholder="Search by title or subject..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="card-body p-0">
+                {tests.length === 0 ? (
+                  <div className="text-center py-5">
+                    <i className="bi bi-inbox" style={{fontSize: "3rem", color: "#ccc"}}></i>
+                    <p className="text-muted mt-3">No tests created yet. Click "Create New Test" to get started.</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive" ref={listRef} id="td-test-list">
+                    <table className="table table-hover mb-0">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Title</th>
+                          <th>Subject</th>
+                          <th>Branch</th>
+                          <th>Questions</th>
+                          <th>Time</th>
+                          <th>Status</th>
+                          <th>Submissions</th>
+                          <th>Deadline</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tests.map((test, idx) => (
+                          <tr key={test._id}>
+                            <td>{idx + 1}</td>
+                            <td className="fw-semibold">
+                              {test.title}
+                              {test.description && <div className="td-row-desc">{test.description}</div>}
+                            </td>
+                            <td><span className="badge bg-info">{test.subject}</span></td>
+                            <td>
+                              <span className="badge bg-dark">
+                                <i className="bi bi-building me-1"></i>
+                                {Array.isArray(test.branches) ? test.branches.join(", ") : test.branch}
                               </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                            </td>
+                            <td><span className="badge bg-secondary">{test.totalQuestions}</span></td>
+                            <td><span className="badge bg-primary"><i className="bi bi-clock me-1"></i>{test.timeLimit}m</span></td>
+                            <td>
+                              <span className={`badge ${test.isPublished ? "bg-success" : "bg-warning"}`}>
+                                {test.isPublished ? "Published" : "Draft"}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="badge td-submissions-badge">
+                                <i className="bi bi-people-fill me-1"></i>
+                                {test.submissionCount ?? 0}
+                              </span>
+                            </td>
+                            <td>
+                              {test.deadline ? (
+                                <small>{new Date(test.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</small>
+                              ) : (
+                                <span className="text-muted">—</span>
+                              )}
+                            </td>
+                            <td>
+                              <div className="d-flex gap-2">
+                                <button
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => navigate(`/test-results/${test._id}`)}
+                                >
+                                  <i className="bi bi-bar-chart-fill me-1"></i>Results
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDeleteTest(test._id)}
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {loadingMore && (
+                      <div className="td-load-more">
+                        <span className="td-load-dot" /><span className="td-load-dot" /><span className="td-load-dot" />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {totalPages > 1 && (
+                  <div className="td-pagination">
+                    {buildPageList(page, totalPages).map((p, i) =>
+                      p === "…" ? (
+                        <span key={`e${i}`} className="td-page-ellipsis">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          className={`td-page-btn${p === page ? " active" : ""}`}
+                          onClick={() => jumpToPage(p)}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -852,9 +953,9 @@ const handlePublishTest = async () => {
                     onChange={(e) => setPdfFile(e.target.files[0])} required />
                   <small className="text-muted">Upload your notes or study material (max 15 MB). Must be a text-based PDF.</small>
                   {pdfFile && (
-                    <div className="mt-2 p-2 bg-light rounded d-flex align-items-center gap-2">
+                    <div className="mt-2 p-2 rounded d-flex align-items-center gap-2" style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)"}}>
                       <i className="bi bi-file-earmark-pdf-fill text-danger"></i>
-                      <span className="small fw-semibold">{pdfFile.name}</span>
+                      <span className="small fw-semibold" style={{color:"rgba(255,255,255,0.85)"}}>{pdfFile.name}</span>
                       <span className="badge bg-secondary ms-auto">{(pdfFile.size / 1024).toFixed(0)} KB</span>
                     </div>
                   )}

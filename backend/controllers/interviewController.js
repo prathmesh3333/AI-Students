@@ -289,12 +289,16 @@ const saveInterview = async (req, res) => {
 const getUserInterviews = async (req, res) => {
   try {
     const { rollNo } = req.params;
+    const search = req.query.search || "";
 
     if (!rollNo) {
       return res.status(400).json({ error: "Roll number is required" });
     }
 
-    const interviews = await Interview.find({ rollNo }).sort({ createdAt: -1 });
+    const filter = { rollNo };
+    if (search) filter.topic = { $regex: search, $options: "i" };
+
+    const interviews = await Interview.find(filter).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,

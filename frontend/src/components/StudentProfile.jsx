@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -15,9 +15,16 @@ const StudentProfile = () => {
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [pendingSearch, setPendingSearch] = useState("");
+  const [pendingSearch, setPendingSearch]     = useState("");
   const [completedSearch, setCompletedSearch] = useState("");
   const [interviewSearch, setInterviewSearch] = useState("");
+  const pendingDebounce    = useRef(null);
+  const completedDebounce  = useRef(null);
+  const interviewDebounce  = useRef(null);
+  const isPendingMounted   = useRef(false);
+  const isCompletedMounted = useRef(false);
+  const isInterviewMounted = useRef(false);
+  const studentDataRef     = useRef({ student: null, completedTests: [] });
 
   const navigate = useNavigate();
 
@@ -54,7 +61,9 @@ const StudentProfile = () => {
         throw new Error("Student not found");
       }
 
-      setStudent(studentResponse.data.student);
+      const studentInfo = studentResponse.data.student;
+      setStudent(studentInfo);
+      studentDataRef.current = { student: studentInfo, completed: studentDataRef.current.completed };
 
       // Fetch student's test results
       // try {
@@ -77,6 +86,7 @@ try {
   if (resultsResponse.data && resultsResponse.data.success) {
     results = resultsResponse.data.results || [];
     setCompletedTests(results);
+    studentDataRef.current = { ...studentDataRef.current, completed: results };
   } else {
     setCompletedTests([]);
   }
@@ -148,6 +158,66 @@ setPendingTests(pending);
       setLoading(false);
     }
   };
+
+  // Keep student data in ref so search functions can access it without stale closure
+  const updateStudentDataRef = (student, completed) => {
+    studentDataRef.current = { student, completed };
+  };
+
+  const fetchPendingTests = async (search) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/test/published?search=${encodeURIComponent(search)}`
+      );
+      if (res.data?.success) {
+        const { student, completed } = studentDataRef.current;
+        const submittedIds = completed.map(r => typeof r.testId === "string" ? r.testId : r.testId?._id);
+        const pending = res.data.tests.filter(test => {
+          const branches = test.branches || [test.branch];
+          return branches.includes(student?.branch) && !submittedIds.includes(test._id);
+        });
+        setPendingTests(pending);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchCompletedTests = async (search) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/test-result/student/${rollNo}?search=${encodeURIComponent(search)}`
+      );
+      if (res.data?.success) setCompletedTests(res.data.results);
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchInterviews = async (search) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `http://localhost:5000/api/interview/student/${rollNo}?search=${encodeURIComponent(search)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data?.success) setInterviews(res.data.interviews);
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (!isPendingMounted.current) { isPendingMounted.current = true; return; }
+    clearTimeout(pendingDebounce.current);
+    pendingDebounce.current = setTimeout(() => fetchPendingTests(pendingSearch), 300);
+  }, [pendingSearch]);
+
+  useEffect(() => {
+    if (!isCompletedMounted.current) { isCompletedMounted.current = true; return; }
+    clearTimeout(completedDebounce.current);
+    completedDebounce.current = setTimeout(() => fetchCompletedTests(completedSearch), 300);
+  }, [completedSearch]);
+
+  useEffect(() => {
+    if (!isInterviewMounted.current) { isInterviewMounted.current = true; return; }
+    clearTimeout(interviewDebounce.current);
+    interviewDebounce.current = setTimeout(() => fetchInterviews(interviewSearch), 300);
+  }, [interviewSearch]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -373,11 +443,7 @@ setPendingTests(pending);
             </div>
           ) : (
             <div className="row g-4">
-              {pendingTests
-  .filter(test =>
-    test.title.toLowerCase().includes(pendingSearch.toLowerCase())
-  )
-  .map((test, index) => (
+              {pendingTests.map((test, index) => (
                 <div key={test._id} className="col-md-6 col-lg-4" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="test-card pending-card">
                     <div className="test-card-ribbon pending-ribbon">
@@ -447,13 +513,7 @@ setPendingTests(pending);
             </div>
           ) : (
             <div className="row g-4">
-              {completedTests
-  .filter(result =>
-    result.testId?.title
-      ?.toLowerCase()
-      .includes(completedSearch.toLowerCase())
-  )
-  .map((result, index) => (
+              {completedTests.map((result, index) => (
 
                 <div key={result._id} className="col-md-6 col-lg-4" style={{ animationDelay: `${index * 0.1}s` }}>
                   <div className="test-card completed-card">
@@ -565,13 +625,7 @@ Mock Interviews Section
   ) : (
     <div className="row g-4">
       {/* /* {interviews.map((interview, index) => ( */}
-      {interviews
-  .filter(interview =>
-    (interview.topic || interview.role || "mock")
-      .toLowerCase()
-      .includes(interviewSearch.toLowerCase())
-  )
-  .map((interview, index) => (
+      {interviews.map((interview, index) => (
 
         <div
           key={interview._id || index}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import "./CompanyList.css";
@@ -13,15 +13,17 @@ const CompanyList = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const searchDebounce = useRef(null);
+  const isSearchMounted = useRef(false);
 
   useEffect(() => {
-    fetchCompanies();
+    fetchCompanies("");
   }, [branch]);
 
-  const fetchCompanies = async () => {
+  const fetchCompanies = async (search) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/question/companies/${encodeURIComponent(branch)}`
+        `http://localhost:5000/api/question/companies/${encodeURIComponent(branch)}?search=${encodeURIComponent(search)}`
       );
       setCompanies(response.data.companies || []);
     } catch (error) {
@@ -31,6 +33,12 @@ const CompanyList = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isSearchMounted.current) { isSearchMounted.current = true; return; }
+    clearTimeout(searchDebounce.current);
+    searchDebounce.current = setTimeout(() => fetchCompanies(searchQuery), 300);
+  }, [searchQuery]);
 
   const handleCompanySelect = (companyName) => {
     if (mode === "view") {
@@ -63,9 +71,6 @@ const CompanyList = () => {
     }
   };
 
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -121,7 +126,7 @@ const CompanyList = () => {
           )}
 
           {/* Existing Companies */}
-          {filteredCompanies.map((company, index) => (
+          {companies.map((company, index) => (
             <div
               key={index}
               className="company-card"
@@ -140,7 +145,7 @@ const CompanyList = () => {
           ))}
         </div>
 
-        {filteredCompanies.length === 0 && searchQuery && (
+        {companies.length === 0 && searchQuery && (
           <div className="empty-state">
             <span className="empty-icon">😕</span>
             <p>No companies found matching "{searchQuery}"</p>
