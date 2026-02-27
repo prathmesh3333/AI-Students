@@ -313,6 +313,7 @@ router.post("/create", upload.array("images"), async (req, res) => {
       timeLimit,
       branches,
       questions,
+      deadline,
     } = req.body;
 
     if (!title || !subject || !totalQuestions || !timeLimit || !branches || !questions) {
@@ -351,6 +352,7 @@ router.post("/create", upload.array("images"), async (req, res) => {
       timeLimit,
       branches: parsedBranches,
       questions: finalQuestions,
+      deadline: deadline ? new Date(deadline) : null,
       isPublished: false,
     });
 

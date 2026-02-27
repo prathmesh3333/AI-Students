@@ -66,6 +66,10 @@ const TestSchema = new mongoose.Schema({
       default: "Medium"
     }
   }],
+  deadline: {
+    type: Date,
+    default: null,
+  },
   isPublished: {
     type: Boolean,
     default: false

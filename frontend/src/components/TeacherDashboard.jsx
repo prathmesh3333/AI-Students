@@ -6,6 +6,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./TeacherDashboard.css";
 import Toast from "./Toast";
 import ConfirmModal from "./ConfirmModal";
+import DeadlinePicker from "./DeadlinePicker";
 
 const TeacherDashboard = () => {
   const [teacherName, setTeacherName] = useState("");
@@ -13,8 +14,6 @@ const TeacherDashboard = () => {
   const [showCreateTestModal, setShowCreateTestModal] = useState(false);
   const [creatingTest, setCreatingTest] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [studentQuestions, setStudentQuestions] = useState([]);
-
 
   // Toast and Modal states
   const [toast, setToast] = useState(null);
@@ -27,7 +26,8 @@ const TeacherDashboard = () => {
     subject: "",
     totalQuestions: 1,
     timeLimit: 30,
-    branches: []
+    branches: [],
+    deadline: ""
   });
 
   const [currentTest, setCurrentTest] = useState(null);
@@ -47,7 +47,7 @@ const TeacherDashboard = () => {
   // PDF-based test creation
   const [showMethodModal, setShowMethodModal] = useState(false);
   const [pdfDetails, setPdfDetails] = useState({
-    title: "", description: "", subject: "", totalQuestions: 5, timeLimit: 30, branches: []
+    title: "", description: "", subject: "", totalQuestions: 5, timeLimit: 30, branches: [], deadline: ""
   });
   const [pdfBranchDropdown, setPdfBranchDropdown] = useState(false);
   const [pdfFile, setPdfFile] = useState(null);
@@ -80,22 +80,6 @@ const TeacherDashboard = () => {
       fetchTests();
     }
   }, [navigate]);
-
-  useEffect(() => {
-  fetchStudentQuestions();
-}, []);
-
-const fetchStudentQuestions = async () => {
-  try {
-    const res = await axios.get("http://localhost:5000/api/question/all");
-    if (res.data.success) {
-      setStudentQuestions(res.data.questions);
-    }
-  } catch (err) {
-    console.error("Error fetching student questions", err);
-  }
-};
-
 
   const fetchTests = async () => {
     try {
@@ -249,7 +233,7 @@ const handlePublishTest = async () => {
     formData.append("timeLimit", testDetails.timeLimit);
     // formData.append("branch", testDetails.branch);
     formData.append("branches", JSON.stringify(testDetails.branches));
-
+    if (testDetails.deadline) formData.append("deadline", testDetails.deadline);
 
     // Questions without images
     const questionsForBackend = questionsList.map((q) => ({
@@ -292,8 +276,8 @@ const handlePublishTest = async () => {
         subject: "",
         totalQuestions: 1,
         timeLimit: 10,
-        branches: []
-
+        branches: [],
+        deadline: ""
       });
 
       fetchTests();
@@ -340,8 +324,8 @@ const handlePublishTest = async () => {
           subject: "",
           totalQuestions: 1,
           timeLimit: 30,
-          branches: []
-
+          branches: [],
+          deadline: ""
         });
         setQuestionForm({
           question: "",
@@ -362,7 +346,7 @@ const handlePublishTest = async () => {
     setPdfFile(null);
     setGeneratedQuestions([]);
     setSelectedQSet(new Set());
-    setPdfDetails({ title: "", description: "", subject: "", totalQuestions: 5, timeLimit: 30, branches: [] });
+    setPdfDetails({ title: "", description: "", subject: "", totalQuestions: 5, timeLimit: 30, branches: [], deadline: "" });
     setPdfBranchDropdown(false);
   };
 
@@ -423,6 +407,7 @@ const handlePublishTest = async () => {
       fd.append("totalQuestions", pdfDetails.totalQuestions);
       fd.append("timeLimit", pdfDetails.timeLimit);
       fd.append("branches", JSON.stringify(pdfDetails.branches));
+      if (pdfDetails.deadline) fd.append("deadline", pdfDetails.deadline);
       fd.append("questions", JSON.stringify(selectedQuestions));
 
       const res = await axios.post("http://localhost:5000/api/test/create", fd, {
@@ -553,6 +538,12 @@ const handlePublishTest = async () => {
                             <span className={`badge ${test.isPublished ? 'bg-success' : 'bg-warning'}`}>
                               {test.isPublished ? 'Published' : 'Draft'}
                             </span>
+                            {test.deadline && (
+                              <span className="badge bg-warning text-dark">
+                                <i className="bi bi-calendar-event me-1"></i>
+                                Due: {new Date(test.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -563,87 +554,6 @@ const handlePublishTest = async () => {
             </div>
           </>
         )}
-        {/* Student Submitted Questions */}
-<div className="row mt-4">
-  <div className="col-12">
-    <div className="card shadow-sm p-4">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h4 className="mb-0">
-          <i className="bi bi-question-circle me-2"></i>
-          Student Submitted Questions
-          <span className="badge bg-success ms-2">
-            {studentQuestions.length}
-          </span>
-        </h4>
-        <button
-          className="btn btn-primary"
-          onClick={() => navigate("/branch-selection?mode=view")}
-        >
-          <i className="bi bi-folder-open me-2"></i>
-          Browse by Branch & Company
-        </button>
-      </div>
-
-      {studentQuestions.length === 0 ? (
-        <p className="text-muted text-center">
-          No student questions yet.
-        </p>
-      ) : (
-        // studentQuestions.map((q, i) => (
-        //   <div key={q._id} className="border rounded p-3 mb-3">
-        //     <h6>Q{i + 1}: {q.questionText}</h6>
-
-        //     {q.image && (
-        //       <img
-        //         src={`http://localhost:5000/uploads/questions/${q.image}`}
-        //         style={{ maxWidth: "200px", borderRadius: "8px" }}
-        //         alt="question"
-        //       />
-        //     )}
-
-        //     <ul className="mt-2">
-        //       {q.options.map((opt, idx) => (
-        //         <li
-        //           key={idx}
-        //           style={{
-        //             fontWeight: idx === q.correctAnswer ? "bold" : "normal",
-        //             color: idx === q.correctAnswer ? "green" : "black"
-        //           }}
-        //         >
-        //           {opt}
-        //         </li>
-        //       ))}
-        //     </ul>
-        //   </div>
-        // ))
-//         studentQuestions.map((q, i) => (
-//   <div key={q._id} className="border rounded p-3 mb-3">
-//     <h6>Q{i + 1}: {q.questionText}</h6>
-
-//     <p className="text-muted">
-//       Company: {q.company || "N/A"} <br/>
-//       Year: {q.year || "N/A"} <br/>
-//       Position: {q.position || "N/A"}
-//     </p>
-//   </div>
-// ))
-studentQuestions.map((q, i) => (
-  <div key={q._id} className="border rounded p-3 mb-3">
-    <h6>Q{i + 1}: {q.questionText}</h6>
-
-    <p className="text-muted">
-      Company: {q.company}<br/>
-      Year: {q.year}<br/>
-      Position: {q.position}
-    </p>
-  </div>
-))
-      )}
-    </div>
-  </div>
-</div>
-
-
         {/* Test Creation Flow */}
         {creatingTest && (
           <div className="test-creation-container">
@@ -923,6 +833,17 @@ studentQuestions.map((q, i) => (
                   </div>
                 </div>
 
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">
+                    <i className="bi bi-calendar-event me-1 text-warning"></i>
+                    Deadline <span className="text-muted fw-normal">(Optional)</span>
+                  </label>
+                  <DeadlinePicker
+                    value={pdfDetails.deadline}
+                    onChange={(val) => setPdfDetails({ ...pdfDetails, deadline: val })}
+                  />
+                </div>
+
                 <div className="mb-2">
                   <label className="form-label fw-semibold">
                     <i className="bi bi-file-earmark-pdf-fill text-danger me-1"></i>Upload PDF *
@@ -1174,6 +1095,17 @@ studentQuestions.map((q, i) => (
                     required
                   />
                   <small className="text-muted">Minimum 1 minute required</small>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">
+                    <i className="bi bi-calendar-event me-1 text-warning"></i>
+                    Deadline <span className="text-muted fw-normal">(Optional)</span>
+                  </label>
+                  <DeadlinePicker
+                    value={testDetails.deadline}
+                    onChange={(val) => setTestDetails({ ...testDetails, deadline: val })}
+                  />
                 </div>
               </div>
               <div className="modal-footer">

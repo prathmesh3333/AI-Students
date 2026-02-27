@@ -33,6 +33,7 @@ const StartTestDashboard = () => {
   const [publishedTests, setPublishedTests] = useState([]);
   const [submittedResults, setSubmittedResults] = useState([]);
   const [pendingTests, setPendingTests] = useState([]);
+  const [outdatedTests, setOutdatedTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pendingSearch, setPendingSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
@@ -55,6 +56,34 @@ const StartTestDashboard = () => {
       fetchData(roll);
     }
   }, [navigate]);
+
+  const getDeadlineLabel = (deadline) => {
+    if (!deadline) return null;
+    const now = new Date();
+    const dl = new Date(deadline);
+    const diffMs = dl - now;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 0)  return { text: "Overdue",          cls: "bg-danger" };
+    if (diffDays === 0) return { text: "Due Today!",       cls: "bg-danger" };
+    if (diffDays === 1) return { text: "Due Tomorrow",     cls: "bg-warning text-dark" };
+    if (diffDays <= 3)  return { text: `Due in ${diffDays} days`, cls: "bg-warning text-dark" };
+    return { text: `Due ${dl.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, cls: "bg-info" };
+  };
+
+  const splitAndSetPending = (pending) => {
+    const now = new Date();
+    const active = pending.filter(t => !t.deadline || new Date(t.deadline) >= now);
+    const outdated = pending.filter(t => t.deadline && new Date(t.deadline) < now);
+    // Sort active: closest deadline first, no-deadline last
+    active.sort((a, b) => {
+      if (!a.deadline && !b.deadline) return 0;
+      if (!a.deadline) return 1;
+      if (!b.deadline) return -1;
+      return new Date(a.deadline) - new Date(b.deadline);
+    });
+    setPendingTests(active);
+    setOutdatedTests(outdated);
+  };
 
   const fetchData = async (roll) => {
     try {
@@ -80,10 +109,10 @@ const StartTestDashboard = () => {
           // Calculate pending tests (tests not yet taken)
           const submittedTestIds = results.map(r => r.testId?._id);
           const pending = allTests.filter(test => !submittedTestIds.includes(test._id));
-          setPendingTests(pending);
+          splitAndSetPending(pending);
         } else {
           // No results yet, all tests are pending
-          setPendingTests(allTests);
+          splitAndSetPending(allTests);
         }
       }
 
@@ -357,6 +386,14 @@ const chartData = {
                             <i className="bi bi-clock" style={{color: '#004b8d'}}></i>
                             <small className="text-muted">{test.timeLimit} Minutes</small>
                           </div>
+                          {(() => {
+                            const dl = getDeadlineLabel(test.deadline);
+                            return dl ? (
+                              <span className={`badge ${dl.cls}`}>
+                                <i className="bi bi-alarm me-1"></i>{dl.text}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
                         <button
                           className="btn btn-primary mt-auto w-100"
@@ -371,6 +408,56 @@ const chartData = {
                 </div>
               )}
             </div>
+
+            {/* Past Deadline Section */}
+            {outdatedTests.length > 0 && (
+              <div className="mb-5">
+                <h3 className="mb-4" style={{color: '#dc3545', fontWeight: '700'}}>
+                  <i className="bi bi-calendar-x me-2"></i>
+                  Past Deadline
+                  <span className="badge bg-danger ms-2">{outdatedTests.length}</span>
+                </h3>
+                <p className="text-muted mb-3" style={{fontSize: '0.9rem'}}>
+                  <i className="bi bi-info-circle me-1"></i>
+                  These tests had a deadline that has passed. You can still attempt them but they are marked as overdue.
+                </p>
+                <div className="row g-4">
+                  {outdatedTests.map((test) => (
+                    <div key={test._id} className="col-md-6 col-lg-4">
+                      <div className="card shadow-sm p-4 hover-card test-card" style={{opacity: 0.75, borderLeft: '4px solid #dc3545'}}>
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <h5 className="fw-bold mb-0">{test.title}</h5>
+                          <span className="badge bg-danger">Overdue</span>
+                        </div>
+                        <span className="badge bg-primary mb-2">{test.subject}</span>
+                        <p className="text-muted mb-3">{test.description}</p>
+                        <div className="d-flex flex-wrap align-items-center gap-3 mb-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <i className="bi bi-question-circle text-muted"></i>
+                            <small className="text-muted">{test.totalQuestions} Questions</small>
+                          </div>
+                          <div className="d-flex align-items-center gap-2">
+                            <i className="bi bi-clock text-muted"></i>
+                            <small className="text-muted">{test.timeLimit} Minutes</small>
+                          </div>
+                          <small className="text-danger fw-semibold">
+                            <i className="bi bi-calendar-x me-1"></i>
+                            Deadline: {new Date(test.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </small>
+                        </div>
+                        <button
+                          className="btn btn-outline-danger mt-auto w-100"
+                          onClick={() => startTest(test._id)}
+                        >
+                          <i className="bi bi-play-circle me-2"></i>
+                          Attempt Anyway
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Submitted Tests Section */}
             <div className="mb-5">

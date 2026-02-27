@@ -18,6 +18,8 @@ const Home = () => {
   const [studentBranch, setStudentBranch] = useState("");
   const [rollNo, setRollNo] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showNotifs, setShowNotifs]     = useState(false);
+  const [todayTests, setTodayTests]     = useState([]);
 
   // ── Change Password modal state ──────────────────────────────
   const [showChangePwd, setShowChangePwd] = useState(false);
@@ -65,6 +67,28 @@ const Home = () => {
       navigate("/login");
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const branch = localStorage.getItem("studentBranch");
+    if (!branch) return;
+    const fetchTodayTests = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/test/published?branch=${branch}`);
+        if (res.data.success) {
+          const today = new Date();
+          const filtered = res.data.tests.filter(test => {
+            if (!test.deadline) return false;
+            const dl = new Date(test.deadline);
+            return dl.toDateString() === today.toDateString();
+          });
+          setTodayTests(filtered);
+        }
+      } catch {
+        // silent fail
+      }
+    };
+    fetchTodayTests();
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -272,9 +296,51 @@ const Home = () => {
         </div>
 
         <div className="h-nav-right">
+          {/* Notification Bell */}
+          <div className="h-notif-wrap">
+            <button
+              className="h-notif-btn"
+              onClick={() => { setShowNotifs(!showNotifs); setShowDropdown(false); }}
+              title="Notifications"
+            >
+              <i className="bi bi-bell-fill" />
+              {todayTests.length > 0 && (
+                <span className="h-notif-badge">{todayTests.length}</span>
+              )}
+            </button>
+
+            {showNotifs && (
+              <>
+                <div className="h-backdrop" onClick={() => setShowNotifs(false)} />
+                <div className="h-notif-dropdown">
+                  <div className="h-notif-header">
+                    <i className="bi bi-bell-fill me-2" />
+                    Tests Due Today
+                  </div>
+                  {todayTests.length === 0 ? (
+                    <div className="h-notif-empty">
+                      <i className="bi bi-check-circle me-2" />
+                      No tests due today
+                    </div>
+                  ) : (
+                    todayTests.map(test => (
+                      <div key={test._id} className="h-notif-item">
+                        <div className="h-notif-item-title">{test.title}</div>
+                        <div className="h-notif-item-meta">
+                          <span>{test.subject}</span>
+                          <span className="h-notif-due">Due Today</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             className="h-avatar-btn"
-            onClick={() => setShowDropdown(!showDropdown)}
+            onClick={() => { setShowDropdown(!showDropdown); setShowNotifs(false); }}
             title="Profile"
           >
             {studentName.charAt(0).toUpperCase()}
