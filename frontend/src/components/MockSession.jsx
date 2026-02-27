@@ -39,7 +39,7 @@ const MockSession = () => {
   const streamingDoneRef = useRef(false);
   const voiceRef = useRef(null);
 
-  // Pick the best available TTS voice (Google > Microsoft Neural > any English)
+  // Pick the best available TTS voice
   useEffect(() => {
     const pickVoice = () => {
       const voices = synthesisRef.current.getVoices();
@@ -61,7 +61,6 @@ const MockSession = () => {
         const v = voices.find((v) => v.name === name);
         if (v) { voiceRef.current = v; return; }
       }
-      // Fallback: any en-US or en- voice
       voiceRef.current =
         voices.find((v) => v.lang === "en-US") ||
         voices.find((v) => v.lang.startsWith("en")) ||
@@ -73,19 +72,13 @@ const MockSession = () => {
   }, []);
 
   // Keep refs in sync with state
-  useEffect(() => {
-    userInputRef.current = userInput;
-  }, [userInput]);
+  useEffect(() => { userInputRef.current = userInput; }, [userInput]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  // ── TTS Queue: speak next sentence, then auto-start mic when done ──
+  // ── TTS Queue ──
   const flushTTSQueue = () => {
-    if (ttsSpeakingRef.current) return; // already speaking
+    if (ttsSpeakingRef.current) return;
     if (ttsQueueRef.current.length === 0) {
-      // Queue drained — if streaming is also done, auto-start mic
       if (streamingDoneRef.current) {
         setIsSpeaking(false);
         setTimeout(() => {
@@ -107,15 +100,8 @@ const MockSession = () => {
     utterance.pitch = 1.05;
     utterance.volume = 1.0;
 
-    utterance.onend = () => {
-      ttsSpeakingRef.current = false;
-      flushTTSQueue();
-    };
-
-    utterance.onerror = () => {
-      ttsSpeakingRef.current = false;
-      flushTTSQueue();
-    };
+    utterance.onend = () => { ttsSpeakingRef.current = false; flushTTSQueue(); };
+    utterance.onerror = () => { ttsSpeakingRef.current = false; flushTTSQueue(); };
 
     synthesisRef.current.speak(utterance);
   };
@@ -123,11 +109,8 @@ const MockSession = () => {
   // ── Buffer chunks → extract complete sentences → queue for TTS ──
   const addToTTSBuffer = (chunk) => {
     ttsRawBufferRef.current += chunk;
-    // Split on sentence endings followed by whitespace
     const parts = ttsRawBufferRef.current.split(/(?<=[.!?])\s+/);
-    // Last element may be incomplete — always keep it in the buffer
     ttsRawBufferRef.current = parts.pop() || "";
-    // Queue any completed sentences
     if (parts.length > 0) {
       parts.forEach((s) => { if (s.trim()) ttsQueueRef.current.push(s.trim()); });
       flushTTSQueue();
@@ -139,7 +122,6 @@ const MockSession = () => {
     if (!answer) return;
 
     const newMessages = [...currentMessages, { sender: "user", text: answer }];
-    // Add placeholder AI message updated incrementally (typewriter effect)
     const messagesWithPlaceholder = [...newMessages, { sender: "ai", text: "" }];
     setMessages(messagesWithPlaceholder);
     messagesRef.current = messagesWithPlaceholder;
@@ -148,7 +130,6 @@ const MockSession = () => {
     userInputRef.current = "";
     setLoading(true);
 
-    // Reset TTS state for new response
     synthesisRef.current.cancel();
     ttsQueueRef.current = [];
     ttsSpeakingRef.current = false;
@@ -185,7 +166,6 @@ const MockSession = () => {
             const payload = JSON.parse(line.slice(6));
 
             if (payload.done) {
-              // Flush any remaining buffer text
               const remaining = ttsRawBufferRef.current.trim();
               if (remaining) {
                 ttsQueueRef.current.push(remaining);
@@ -193,23 +173,18 @@ const MockSession = () => {
               }
               streamingDoneRef.current = true;
               flushTTSQueue();
-
             } else if (payload.chunk) {
               fullText += payload.chunk;
-              // Update last AI message in real-time (typewriter effect)
               setMessages((prev) => {
                 const updated = [...prev];
                 updated[updated.length - 1] = { sender: "ai", text: fullText };
                 return updated;
               });
               addToTTSBuffer(payload.chunk);
-
             } else if (payload.error) {
               throw new Error(payload.error);
             }
-          } catch (_) {
-            // skip malformed SSE lines
-          }
+          } catch (_) {}
         }
       }
     } catch (error) {
@@ -236,11 +211,7 @@ const MockSession = () => {
   // ── Auto-send triggered by silence detection ──
   const triggerAutoSend = () => {
     const answer = userInputRef.current.trim();
-    if (!answer) {
-      console.log("No answer to send");
-      return;
-    }
-    console.log("Auto-sending answer:", answer);
+    if (!answer) return;
     sendAnswer(answer, messagesRef.current);
   };
 
@@ -255,9 +226,7 @@ const MockSession = () => {
       recognition.interimResults = true;
       recognition.lang = "en-US";
 
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
+      recognition.onstart = () => setIsListening(true);
 
       recognition.onresult = (event) => {
         let interimText = "";
@@ -283,37 +252,28 @@ const MockSession = () => {
 
         setInterimTranscript(interimText);
 
-        // Reset silence timer
+        // Don't reset the auto-send flag if the silence timer already fired
+        // (browser may emit one more onresult after stop() is called)
+        if (shouldAutoSendRef.current) return;
+
         clearTimeout(silenceTimerRef.current);
         clearInterval(countdownIntervalRef.current);
         setCountdown(null);
         setCountdownProgress(100);
-        shouldAutoSendRef.current = false;
 
-        // Start countdown after 1.5 seconds of silence
         setCountdown(2);
-
         silenceTimerRef.current = setTimeout(() => {
           shouldAutoSendRef.current = true;
-          if (recognitionRef.current) {
-            recognitionRef.current.stop();
-          }
+          if (recognitionRef.current) recognitionRef.current.stop();
         }, 1500);
 
-        // Update countdown display every 100ms
         let elapsed = 0;
         countdownIntervalRef.current = setInterval(() => {
           elapsed += 100;
           const remaining = 1500 - elapsed;
-          const secondsLeft = Math.ceil(remaining / 1000);
-          const progress = (remaining / 1500) * 100;
-
-          setCountdown(secondsLeft);
-          setCountdownProgress(progress);
-
-          if (remaining <= 0) {
-            clearInterval(countdownIntervalRef.current);
-          }
+          setCountdown(Math.ceil(remaining / 1000));
+          setCountdownProgress((remaining / 1500) * 100);
+          if (remaining <= 0) clearInterval(countdownIntervalRef.current);
         }, 100);
       };
 
@@ -329,24 +289,17 @@ const MockSession = () => {
         setCountdown(null);
         setCountdownProgress(100);
 
-        if (shouldAutoSendRef.current) {
+        if (shouldAutoSendRef.current || userInputRef.current.trim()) {
           shouldAutoSendRef.current = false;
-          // Small delay to ensure all state updates are processed
-          setTimeout(() => {
-            triggerAutoSend();
-          }, 200);
+          setTimeout(() => triggerAutoSend(), 200);
         }
       };
 
       recognitionRef.current = recognition;
-    } else {
-      console.warn("Speech Recognition not supported in this browser.");
     }
 
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      if (recognitionRef.current) recognitionRef.current.stop();
       clearTimeout(silenceTimerRef.current);
       clearInterval(countdownIntervalRef.current);
       synthesisRef.current.cancel();
@@ -356,44 +309,27 @@ const MockSession = () => {
   // Speak welcome / initial question on load
   useEffect(() => {
     if (interviewData?.question) {
-      const welcomeMsg = { sender: "ai", text: interviewData.question };
-      setMessages([welcomeMsg]);
+      setMessages([{ sender: "ai", text: interviewData.question }]);
       speakText(interviewData.question);
     } else {
-      const welcomeMsg = { sender: "ai", text: "Welcome to your mock interview!" };
-      setMessages([welcomeMsg]);
+      setMessages([{ sender: "ai", text: "Welcome to your mock interview!" }]);
       speakText("Welcome to your mock interview!");
     }
   }, [interviewData]);
 
-  // Text-to-Speech for the welcome message (subsequent responses use TTS queue)
   const speakText = (text) => {
     synthesisRef.current.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     if (voiceRef.current) utterance.voice = voiceRef.current;
     utterance.rate = 0.92;
     utterance.pitch = 1.05;
     utterance.volume = 1.0;
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-    };
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      setTimeout(() => startListening(), 500);
-    };
-
-    utterance.onerror = (event) => {
-      console.error("Speech synthesis error:", event);
-      setIsSpeaking(false);
-    };
-
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => { setIsSpeaking(false); setTimeout(() => startListening(), 500); };
+    utterance.onerror = () => setIsSpeaking(false);
     synthesisRef.current.speak(utterance);
   };
 
-  // Start listening
   const startListening = () => {
     if (recognitionRef.current && !isListening) {
       setTranscript("");
@@ -403,45 +339,37 @@ const MockSession = () => {
       setCountdown(null);
       setCountdownProgress(100);
       shouldAutoSendRef.current = false;
-      try {
-        recognitionRef.current.start();
-      } catch (_) {}
+      try { recognitionRef.current.start(); } catch (_) {}
     }
   };
 
-  // Stop listening
   const stopListening = () => {
     if (recognitionRef.current && isListening) {
       shouldAutoSendRef.current = false;
-      recognitionRef.current.stop();
+      // Clear input so the fallback in onend doesn't accidentally auto-send
+      userInputRef.current = "";
+      setUserInput("");
+      setTranscript("");
+      setInterimTranscript("");
       clearTimeout(silenceTimerRef.current);
       clearInterval(countdownIntervalRef.current);
       setCountdown(null);
       setCountdownProgress(100);
-      setInterimTranscript("");
+      recognitionRef.current.stop();
     }
   };
 
-  // Stop speaking (clears TTS queue) then auto-start listening
   const stopSpeaking = () => {
     synthesisRef.current.cancel();
     ttsQueueRef.current = [];
     ttsSpeakingRef.current = false;
-    streamingDoneRef.current = true; // treat as done so mic starts
+    streamingDoneRef.current = true;
     setIsSpeaking(false);
     setTimeout(() => {
       if (recognitionRef.current) {
         try { recognitionRef.current.start(); } catch (_) {}
       }
     }, 300);
-  };
-
-  // Manual send (send button)
-  const handleSend = () => {
-    stopListening();
-    const answer = userInputRef.current.trim();
-    if (!answer) return;
-    sendAnswer(answer, messagesRef.current);
   };
 
   const handleEndInterview = async () => {
@@ -451,16 +379,10 @@ const MockSession = () => {
         messages,
         role,
       });
-
       navigate("/interview-summary", {
         state: {
           summary: res.data.summary,
-          interviewData: {
-            role,
-            experience,
-            resumeText: resumeText || "",
-            messages,
-          },
+          interviewData: { role, experience, resumeText: resumeText || "", messages },
         },
       });
     } catch (error) {
@@ -471,147 +393,178 @@ const MockSession = () => {
     }
   };
 
+  // Derive current state class
+  const stateClass = isSpeaking
+    ? "ms-speaking"
+    : isListening
+    ? "ms-listening"
+    : loading
+    ? "ms-processing"
+    : "ms-idle";
+
+  // Last AI message
+  const aiMessages = messages.filter((m) => m.sender === "ai");
+  const currentQuestion = aiMessages[aiMessages.length - 1]?.text ?? "";
+
   return (
-    <div className="mock-session-container">
-      <div className="mock-session-card">
-        <div className="session-header">
-          <h3>Mock Interview Session</h3>
-          <p>
-            Role: <b>{role}</b> | Experience: <b>{experience}</b>
-          </p>
-        </div>
+    <div className="ms-room">
+      {/* ── Ambient blobs ── */}
+      <div className="ms-blob ms-blob-1" />
+      <div className="ms-blob ms-blob-2" />
+      <div className="ms-blob ms-blob-3" />
 
-        <div className="chat-window">
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`chat-bubble ${
-                msg.sender === "user" ? "user-bubble" : "ai-bubble"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-          {/* Only show "thinking" when the placeholder AI bubble has no text yet */}
-          {loading && messages[messages.length - 1]?.sender === "ai" &&
-            messages[messages.length - 1]?.text === "" && (
-              <div className="typing">AI is thinking...</div>
-            )}
+      {/* ── Header ── */}
+      <header className="ms-header">
+        <div className="ms-header-brand">
+          <i className="bi bi-cpu-fill" />
+          <span>Mock Interview</span>
         </div>
+        <div className="ms-header-meta">
+          <span className="ms-pill">{role}</span>
+          <span className="ms-pill ms-pill-dim">{experience}</span>
+        </div>
+        <button
+          className="ms-end-btn"
+          onClick={handleEndInterview}
+          disabled={ending}
+        >
+          <i className="bi bi-box-arrow-right" />
+          End
+        </button>
+      </header>
 
-        <div className="voice-input-section">
-          {/* Voice Status Indicator */}
-          <div className="voice-status">
+      {/* ── Stage ── */}
+      <main className="ms-stage">
+        {/* Animated Orb */}
+        <div className={`ms-orb-wrap ${stateClass}`}>
+          <div className="ms-orb-ring ms-orb-r3" />
+          <div className="ms-orb-ring ms-orb-r2" />
+          <div className="ms-orb-ring ms-orb-r1" />
+          <div className="ms-orb-core">
             {isSpeaking && (
-              <div className="status-badge speaking">
-                <i className="bi bi-volume-up-fill"></i>
-                <span>AI Speaking...</span>
-                <button className="stop-btn ms-2" onClick={stopSpeaking}>
-                  <i className="bi bi-stop-fill"></i>
-                </button>
+              <div className="ms-bars">
+                <span /><span /><span /><span /><span />
               </div>
             )}
-
-            {isListening && !isSpeaking && (
-              <div className="status-badge listening">
-                <i className="bi bi-mic-fill pulse-icon"></i>
-                <span>Listening... (Auto-send after 1.5s silence)</span>
+            {isListening && <i className="bi bi-mic-fill ms-core-icon" />}
+            {loading && !isSpeaking && !isListening && (
+              <div className="ms-proc-dots">
+                <span /><span /><span />
               </div>
             )}
-
-            {!isListening && !isSpeaking && !loading && (
-              <div className="status-badge ready">
-                <i className="bi bi-mic-mute"></i>
-                <span>Ready to listen</span>
-              </div>
-            )}
-
-            {loading && !isSpeaking && (
-              <div className="status-badge processing">
-                <div className="spinner-border spinner-border-sm me-2"></div>
-                <span>AI is responding...</span>
-              </div>
+            {!isSpeaking && !isListening && !loading && (
+              <i className="bi bi-person-workspace ms-core-icon ms-core-idle" />
             )}
           </div>
+        </div>
 
-          {/* Live Transcript Display */}
-          {(userInput || interimTranscript) && (
-            <div className="live-transcript">
-              <p className="transcript-label">
-                <i className="bi bi-mic-fill me-2"></i>
-                Your Answer:
-              </p>
-              <p className="transcript-text">
-                <span className="final-text">{userInput}</span>
-                {interimTranscript && (
-                  <span className="interim-text">{interimTranscript}</span>
-                )}
-              </p>
-
-              {/* Countdown Timer with Progress Bar */}
-              {countdown !== null && isListening && (
-                <div className="countdown-container">
-                  <div className="countdown-info">
-                    <i className="bi bi-hourglass-split me-2"></i>
-                    <span>Auto-sending in {countdown}s...</span>
-                  </div>
-                  <div className="countdown-progress-bar">
-                    <div
-                      className="countdown-progress-fill"
-                      style={{ width: `${countdownProgress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
+        {/* State label */}
+        <div className="ms-state-row">
+          {isSpeaking && (
+            <div className="ms-sl ms-sl-ai">
+              <span className="ms-sl-dot" />
+              AI is speaking
+              <button className="ms-skip-btn" onClick={stopSpeaking}>
+                <i className="bi bi-skip-forward-fill" /> Skip
+              </button>
             </div>
           )}
+          {isListening && !isSpeaking && (
+            <div className="ms-sl ms-sl-user">
+              <span className="ms-sl-dot" />
+              Listening to your answer...
+            </div>
+          )}
+          {loading && !isSpeaking && (
+            <div className="ms-sl ms-sl-proc">
+              <span className="ms-sl-dot" />
+              Processing your answer...
+            </div>
+          )}
+          {!isSpeaking && !isListening && !loading && (
+            <div className="ms-sl ms-sl-idle">
+              <span className="ms-sl-dot" />
+              Ready
+            </div>
+          )}
+        </div>
 
-          {/* Voice Controls */}
-          <div className="voice-controls">
-            <button
-              className={`btn btn-voice ${isListening ? "btn-danger" : "btn-primary"}`}
-              onClick={isListening ? stopListening : startListening}
-              disabled={isSpeaking || loading}
-            >
-              <i className={`bi ${isListening ? "bi-mic-fill" : "bi-mic"}`}></i>
-              {isListening ? "Stop Recording" : "Start Recording"}
-            </button>
+        {/* Current Question */}
+        <div className="ms-question-area">
+          {currentQuestion ? (
+            <p className="ms-question">{currentQuestion}</p>
+          ) : (
+            <div className="ms-thinking">
+              <span /><span /><span />
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ── User Zone ── */}
+      <footer className="ms-user-zone">
+        {/* Transcript */}
+        <div className={`ms-transcript ${(userInput || interimTranscript) ? "ms-transcript-active" : ""}`}>
+          <div className="ms-transcript-label">
+            <i className="bi bi-mic" /> Your answer
           </div>
+          <div className="ms-transcript-text">
+            <span className="ms-final">{userInput}</span>
+            {interimTranscript && (
+              <span className="ms-interim"> {interimTranscript}</span>
+            )}
+          </div>
+          {countdown !== null && isListening && (
+            <div className="ms-cd-wrap">
+              <div className="ms-cd-bar">
+                <div className="ms-cd-fill" style={{ width: `${countdownProgress}%` }} />
+              </div>
+              <span className="ms-cd-label">Sending in {countdown}s</span>
+            </div>
+          )}
         </div>
 
-        <div className="footer-btns">
+        {/* Mic Button */}
+        <div className="ms-mic-area">
           <button
-            className="btn btn-outline-danger"
-            onClick={handleEndInterview}
-            disabled={ending}
+            className={`ms-mic-btn ${isListening ? "ms-mic-on" : ""}`}
+            onClick={isListening ? stopListening : startListening}
+            disabled={isSpeaking || loading}
           >
-            {ending ? (
-              <>
-                <span className="spinner-border spinner-border-sm me-2" role="status" />
-                Generating Summary...
-              </>
-            ) : "End Interview"}
+            <i className={`bi ${isListening ? "bi-mic-fill" : "bi-mic"}`} />
+            {isListening && <span className="ms-ripple ms-rip1" />}
+            {isListening && <span className="ms-ripple ms-rip2" />}
+            {isListening && <span className="ms-ripple ms-rip3" />}
           </button>
+          <span className="ms-mic-label">
+            {isListening
+              ? "Tap to stop"
+              : isSpeaking
+              ? "AI is speaking..."
+              : loading
+              ? "Processing..."
+              : "Tap to speak"}
+          </span>
         </div>
+      </footer>
 
-        {/* Full-page loading overlay while generating summary */}
-        {ending && (
-          <div className="session-loading-overlay">
-            <div className="loading-content">
-              <div className="loading-spinner">
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-              </div>
-              <h3 className="loading-title">Analyzing Your Interview...</h3>
-              <p className="loading-subtitle">AI is preparing your performance report</p>
-              <div className="loading-dots">
-                <span></span><span></span><span></span>
-              </div>
+      {/* ── Summary Generation Overlay ── */}
+      {ending && (
+        <div className="ms-overlay">
+          <div className="ms-overlay-body">
+            <div className="ms-ov-spinner">
+              <div className="ms-ov-ring" />
+              <div className="ms-ov-ring ms-ov-r2" />
+              <div className="ms-ov-ring ms-ov-r3" />
+            </div>
+            <h2 className="ms-ov-title">Analyzing Your Interview</h2>
+            <p className="ms-ov-sub">AI is preparing your performance report</p>
+            <div className="ms-ov-dots">
+              <span /><span /><span />
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

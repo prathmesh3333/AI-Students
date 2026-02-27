@@ -343,7 +343,7 @@ const slides = chunkArray(filteredInterviews, chunkSize);
 
                         <div className="fixed-footer">
                           <button
-                            className="btn btn-primary btn-sm"
+                            className="btn btn-primary"
                             onClick={() =>
                               navigate("/interview-summary", {
                                 state: {
@@ -371,6 +371,7 @@ const slides = chunkArray(filteredInterviews, chunkSize);
                               })
                             }
                           >
+                            <i className="bi bi-bar-chart-line-fill me-1" />
                             View Summary
                           </button>
                         </div>
