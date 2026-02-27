@@ -188,6 +188,36 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 12px;
+  max-height: 288px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.students-grid::-webkit-scrollbar {
+  width: 5px;
+}
+
+.students-grid::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+}
+
+.students-grid::-webkit-scrollbar-thumb {
+  background: rgba(99,102,241,0.35);
+  border-radius: 10px;
+}
+
+.students-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(99,102,241,0.65);
+}
+
+/* ── Branch inline loading (scroll fetch) ── */
+.branch-loading {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 4px;
+  color: #6366f1;
 }
 
 /* ── Student Card ── */

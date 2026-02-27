@@ -5,59 +5,95 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./StudentsList.css";
 
+const LIMIT = 9;
+const BRANCHES = ["Computer Engineering", "IT", "EXTC", "Electrical", "Mechanical"];
+
+
+const mkInit = () =>
+  Object.fromEntries(BRANCHES.map(b => [b, { list: [], page: 0, hasMore: true, loading: false }]));
+
 const StudentsList = () => {
-  const [teacherName, setTeacherName] = useState("");
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [teacherName, setTeacherName]   = useState("");
+  const [branchData, setBranchData]     = useState(mkInit);
+  const [searchTerm, setSearchTerm]     = useState("");
+  const [pageLoading, setPageLoading]   = useState(true);
+
   const searchDebounce  = useRef(null);
   const isSearchMounted = useRef(false);
+  const searchRef       = useRef("");
+  const branchDataRef   = useRef(branchData);
 
   const navigate = useNavigate();
 
-  const branches = ["Computer Engineering", "IT", "EXTC", "Electrical", "Mechanical"];
+  // keep ref in sync so scroll handlers never see stale state
+  useEffect(() => { branchDataRef.current = branchData; }, [branchData]);
 
+  const fetchBranch = async (branch, page, search, append) => {
+    setBranchData(prev => ({ ...prev, [branch]: { ...prev[branch], loading: true } }));
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/auth/students` +
+        `?branch=${encodeURIComponent(branch)}` +
+        `&search=${encodeURIComponent(search)}` +
+        `&page=${page}&limit=${LIMIT}`
+      );
+      if (res.data?.success) {
+        setBranchData(prev => {
+          // For CE page-1 fresh fetch (no search), prepend dummy data
+          const base = append ? prev[branch].list : [];
+          return {
+            ...prev,
+            [branch]: {
+              list: [...base, ...res.data.students],
+              page,
+              hasMore: res.data.hasMore,
+              loading: false,
+            },
+          };
+        });
+      }
+    } catch (err) {
+      console.error(`Error fetching ${branch}:`, err);
+      setBranchData(prev => ({ ...prev, [branch]: { ...prev[branch], loading: false } }));
+    }
+  };
+
+  // initial load — all branches page 1 in parallel
   useEffect(() => {
     const name = localStorage.getItem("teacherName");
     if (!name) { navigate("/login"); return; }
     setTeacherName(name);
-    fetchStudents("");
+    (async () => {
+      await Promise.allSettled(BRANCHES.map(b => fetchBranch(b, 1, "", false)));
+      setPageLoading(false);
+    })();
   }, [navigate]);
 
-  const fetchStudents = async (search) => {
-    try {
-      setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/auth/students?search=${encodeURIComponent(search)}`
-      );
-      if (response.data && response.data.success) {
-        setStudents(response.data.students);
-      }
-    } catch (error) {
-      console.error("Error fetching students:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // search debounce — reset all branches and re-fetch
   useEffect(() => {
     if (!isSearchMounted.current) { isSearchMounted.current = true; return; }
     clearTimeout(searchDebounce.current);
-    searchDebounce.current = setTimeout(() => fetchStudents(searchTerm), 300);
+    searchDebounce.current = setTimeout(() => {
+      searchRef.current = searchTerm;
+      setBranchData(mkInit());
+      BRANCHES.forEach(b => fetchBranch(b, 1, searchTerm, false));
+    }, 300);
   }, [searchTerm]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
+  // scroll handler — load next page when near bottom
+  const handleScroll = (branch) => (e) => {
+    const el = e.currentTarget;
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+    const bd = branchDataRef.current[branch];
+    if (nearBottom && bd.hasMore && !bd.loading) {
+      fetchBranch(branch, bd.page + 1, searchRef.current, true);
+    }
   };
 
-  const handleViewProfile = (rollNo) => {
-    navigate(`/student-profile/${rollNo}`);
-  };
+  const handleLogout     = () => { localStorage.clear(); navigate("/login"); };
+  const handleViewProfile = (rollNo) => navigate(`/student-profile/${rollNo}`);
 
-  const getStudentsByBranch = (branch) => students.filter(s => s.branch === branch);
-
-  if (loading) {
+  if (pageLoading) {
     return (
       <div className="students-list-container">
         <div className="loading-container">
@@ -72,7 +108,8 @@ const StudentsList = () => {
     );
   }
 
-  const totalStudents = students.length;
+  const totalStudents = BRANCHES.reduce((sum, b) => sum + branchData[b].list.length, 0);
+  const anyLoading    = BRANCHES.some(b => branchData[b].loading);
 
   return (
     <div className="students-list-container">
@@ -89,9 +126,7 @@ const StudentsList = () => {
           >
             <i className="bi bi-house-door me-1"></i> Dashboard
           </button>
-          <span className="fw-semibold text-white">
-            {teacherName || "Teacher"}
-          </span>
+          <span className="fw-semibold text-white">{teacherName || "Teacher"}</span>
           <button onClick={handleLogout} className="btn btn-outline-light btn-sm">
             <i className="bi bi-box-arrow-right me-1"></i> Logout
           </button>
@@ -118,10 +153,9 @@ const StudentsList = () => {
         </div>
 
         {/* Students by Branch */}
-        {branches.map((branch) => {
-          const branchStudents = getStudentsByBranch(branch);
-
-          if (branchStudents.length === 0) return null;
+        {BRANCHES.map((branch) => {
+          const bd = branchData[branch];
+          if (bd.list.length === 0 && !bd.loading) return null;
 
           return (
             <div key={branch} className="branch-section">
@@ -131,12 +165,12 @@ const StudentsList = () => {
                   {branch}
                 </div>
                 <div className="branch-count">
-                  {branchStudents.length} {branchStudents.length === 1 ? 'Student' : 'Students'}
+                  {bd.list.length} {bd.list.length === 1 ? 'Student' : 'Students'}
                 </div>
               </div>
 
-              <div className="students-grid">
-                {branchStudents.map((student, index) => (
+              <div className="students-grid" onScroll={handleScroll(branch)}>
+                {bd.list.map((student, index) => (
                   <div
                     key={student.rollNo}
                     className="student-card-compact"
@@ -153,20 +187,23 @@ const StudentsList = () => {
                     <i className="bi bi-chevron-right card-arrow"></i>
                   </div>
                 ))}
+                {bd.loading && (
+                  <div className="branch-loading">
+                    <div className="spinner-border spinner-border-sm" role="status" />
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
 
         {/* Empty State */}
-        {totalStudents === 0 && (
+        {totalStudents === 0 && !anyLoading && (
           <div className="empty-state">
             <i className="bi bi-person-x"></i>
             <h5>No Students Found</h5>
             <p className="text-muted">
-              {searchTerm
-                ? "Try adjusting your search criteria"
-                : "No students have registered yet"}
+              {searchTerm ? "Try adjusting your search criteria" : "No students have registered yet"}
             </p>
           </div>
         )}

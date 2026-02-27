@@ -174,6 +174,10 @@ const getStudent = async (req, res) => {
 const getAllStudents = async (req, res) => {
   try {
     const search = req.query.search || "";
+    const branch = req.query.branch || "";
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(50, Math.max(1, parseInt(req.query.limit) || 9));
+
     const filter = {};
     if (search) {
       filter.$or = [
@@ -181,16 +185,23 @@ const getAllStudents = async (req, res) => {
         { rollNo: { $regex: search, $options: "i" } },
       ];
     }
+    if (branch) filter.branch = branch;
 
-    const students = await FormDataModel.find(filter).select("-password").sort({ name: 1 });
+    const [students, total] = await Promise.all([
+      FormDataModel.find(filter)
+        .select("-password")
+        .sort({ name: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      FormDataModel.countDocuments(filter),
+    ]);
 
     res.json({
       success: true,
-      students: students.map(student => ({
-        rollNo: student.rollNo,
-        name: student.name,
-        branch: student.branch
-      }))
+      students: students.map(s => ({ rollNo: s.rollNo, name: s.name, branch: s.branch })),
+      total,
+      page,
+      hasMore: page * limit < total,
     });
   } catch (err) {
     console.error("❌ Get All Students Error:", err);
