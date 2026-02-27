@@ -195,6 +195,8 @@ const express = require("express");
 const router = express.Router();
 const Test = require("../models/Test");
 const TestResult = require("../models/TestResult");
+const FormDataModel = require("../models/FormData");
+const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
 const pdfParse = require("pdf-parse");
@@ -594,6 +596,54 @@ ${pdfText.substring(0, 12000)}`;
   } catch (error) {
     console.error("PDF generation error:", error);
     res.status(500).json({ success: false, error: error.message || "Failed to generate questions from PDF" });
+  }
+});
+
+/* ===============================
+   GET PENDING TESTS FOR STUDENT (paginated)
+   ?type=active|outdated  &page=  &limit=  &search=
+================================ */
+router.get("/pending/:rollNo", async (req, res) => {
+  try {
+    const { rollNo } = req.params;
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(50, Math.max(1, parseInt(req.query.limit) || 9));
+    const search = req.query.search || "";
+    const type   = req.query.type || "active"; // "active" | "outdated"
+
+    const student = await FormDataModel.findOne({ rollNo });
+    if (!student) return res.status(404).json({ success: false, error: "Student not found" });
+
+    const submitted = await TestResult.find({ rollNo }).select("testId");
+    const submittedIds = submitted.map(r => new mongoose.Types.ObjectId(r.testId));
+
+    const now = new Date();
+    const filter = {
+      isPublished: true,
+      branches: { $in: [student.branch] },
+      _id: { $nin: submittedIds },
+    };
+
+    if (type === "active") {
+      filter.$or = [{ deadline: null }, { deadline: { $exists: false } }, { deadline: { $gte: now } }];
+    } else {
+      filter.deadline = { $lt: now };
+    }
+
+    if (search) {
+      const sq = { $or: [{ title: { $regex: search, $options: "i" } }, { subject: { $regex: search, $options: "i" } }] };
+      filter.$and = [sq];
+    }
+
+    const [tests, total] = await Promise.all([
+      Test.find(filter).select("-questions.correctAnswer").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Test.countDocuments(filter),
+    ]);
+
+    res.json({ success: true, tests, total, page, hasMore: page * limit < total });
+  } catch (err) {
+    console.error("❌ Pending tests error:", err);
+    res.status(500).json({ success: false, error: "Failed to fetch pending tests" });
   }
 });
 

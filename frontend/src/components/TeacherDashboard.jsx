@@ -566,10 +566,9 @@ const handlePublishTest = async () => {
                           <th>Branch</th>
                           <th>Questions</th>
                           <th>Time</th>
-                          <th>Status</th>
                           <th>Submissions</th>
                           <th>Deadline</th>
-                          <th>Actions</th>
+                          <th style={{ width: "1%", whiteSpace: "nowrap" }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -590,11 +589,6 @@ const handlePublishTest = async () => {
                             <td><span className="badge bg-secondary">{test.totalQuestions}</span></td>
                             <td><span className="badge bg-primary"><i className="bi bi-clock me-1"></i>{test.timeLimit}m</span></td>
                             <td>
-                              <span className={`badge ${test.isPublished ? "bg-success" : "bg-warning"}`}>
-                                {test.isPublished ? "Published" : "Draft"}
-                              </span>
-                            </td>
-                            <td>
                               <span className="badge td-submissions-badge">
                                 <i className="bi bi-people-fill me-1"></i>
                                 {test.submissionCount ?? 0}
@@ -607,7 +601,7 @@ const handlePublishTest = async () => {
                                 <span className="text-muted">—</span>
                               )}
                             </td>
-                            <td>
+                            <td style={{ width: "1%", whiteSpace: "nowrap" }}>
                               <div className="d-flex gap-2">
                                 <button
                                   className="btn btn-sm btn-primary"

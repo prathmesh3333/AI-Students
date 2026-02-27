@@ -164,6 +164,7 @@
 .stat-box-warning .stat-icon { background: linear-gradient(135deg, #f59e0b, #ef4444); }
 .stat-box-success .stat-icon { background: linear-gradient(135deg, #06b6d4, #6366f1); }
 .stat-box-info    .stat-icon { background: linear-gradient(135deg, #10b981, #06b6d4); }
+.stat-box-danger  .stat-icon { background: linear-gradient(135deg, #6b7280, #ef4444); }
 
 .stat-info { flex: 1; }
 .stat-number { font-size: 1.7rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 3px; }
@@ -212,6 +213,17 @@
 .empty-state h5 { color: #fff; font-weight: 700; font-size: 1.3rem; margin-bottom: 8px; }
 .empty-state p  { color: rgba(255,255,255,0.35); font-size: 0.95rem; margin: 0; }
 
+/* Section scroll wrapper — shows ~3 card rows then scrolls */
+.sp-grid-wrap {
+  max-height: 800px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.sp-grid-wrap::-webkit-scrollbar { width: 5px; }
+.sp-grid-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 10px; }
+.sp-grid-wrap::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); border-radius: 10px; }
+.sp-grid-wrap::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.65); }
+
 /* Test cards */
 .test-card {
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
@@ -242,6 +254,26 @@
 .passed-ribbon   { background: linear-gradient(135deg, #10b981, #06b6d4); color: #fff; }
 .failed-ribbon   { background: linear-gradient(135deg, #ef4444, #f59e0b); color: #fff; }
 .interview-ribbon{ background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+.outdated-ribbon { background: linear-gradient(135deg, #6b7280, #ef4444); color: #fff; }
+
+.outdated-card {
+  opacity: 0.75;
+  border-color: rgba(239,68,68,0.2) !important;
+}
+.outdated-card:hover {
+  opacity: 1;
+  border-color: rgba(239,68,68,0.4) !important;
+}
+.outdated-deadline {
+  color: #f87171 !important;
+}
+.outdated-deadline i { color: #f87171 !important; }
+
+.section-count-danger {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+}
 
 .test-card-header {
   padding: 20px; background: rgba(99,102,241,0.08);

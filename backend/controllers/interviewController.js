@@ -285,31 +285,34 @@ const saveInterview = async (req, res) => {
   }
 };
 
-// ---------------- Get User Interviews ----------------
+// ---------------- Get User Interviews (paginated) ----------------
 const getUserInterviews = async (req, res) => {
   try {
     const { rollNo } = req.params;
-    const search = req.query.search || "";
+    if (!rollNo) return res.status(400).json({ error: "Roll number is required" });
 
-    if (!rollNo) {
-      return res.status(400).json({ error: "Roll number is required" });
-    }
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(50, Math.max(1, parseInt(req.query.limit) || 9));
+    const search = req.query.search || "";
 
     const filter = { rollNo };
     if (search) filter.topic = { $regex: search, $options: "i" };
 
-    const interviews = await Interview.find(filter).sort({ createdAt: -1 });
+    const [interviews, total] = await Promise.all([
+      Interview.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Interview.countDocuments(filter),
+    ]);
 
     res.status(200).json({
       success: true,
-      interviews
+      interviews,
+      total,
+      page,
+      hasMore: page * limit < total,
     });
   } catch (error) {
     console.error("❌ getUserInterviews Error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch interviews"
-    });
+    res.status(500).json({ success: false, error: "Failed to fetch interviews" });
   }
 };
 // ---------------- Get Single Interview By ID ----------------

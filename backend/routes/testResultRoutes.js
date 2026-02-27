@@ -147,34 +147,43 @@ router.get("/test/:testId", async (req, res) => {
   }
 });
 
-// Get results for a specific student
+// Get results for a specific student (paginated)
 router.get("/student/:rollNo", async (req, res) => {
   try {
     const { rollNo } = req.params;
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(50, Math.max(1, parseInt(req.query.limit) || 9));
     const search = req.query.search || "";
 
-    let results = await TestResult.find({ rollNo })
-      .populate("testId", "title subject")
-      .sort({ submittedAt: -1 });
+    let results, total;
 
     if (search) {
+      // Fetch all then filter (search is on populated field)
+      let all = await TestResult.find({ rollNo })
+        .populate("testId", "title subject")
+        .sort({ submittedAt: -1 });
       const q = search.toLowerCase();
-      results = results.filter(r =>
+      all = all.filter(r =>
         r.testId?.title?.toLowerCase().includes(q) ||
         r.testId?.subject?.toLowerCase().includes(q)
       );
+      total = all.length;
+      results = all.slice((page - 1) * limit, page * limit);
+    } else {
+      [results, total] = await Promise.all([
+        TestResult.find({ rollNo })
+          .populate("testId", "title subject")
+          .sort({ submittedAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit),
+        TestResult.countDocuments({ rollNo }),
+      ]);
     }
 
-    res.json({
-      success: true,
-      results
-    });
+    res.json({ success: true, results, total, page, hasMore: page * limit < total });
   } catch (error) {
     console.error("Error fetching student results:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch results"
-    });
+    res.status(500).json({ success: false, error: "Failed to fetch results" });
   }
 });
 

@@ -76,7 +76,7 @@ function App() {
         <Route path="/teacher-dashboard" element={<ProtectedRoute teacherOnly><TeacherDashboard /></ProtectedRoute>} />
         <Route path="/test-results/:testId" element={<ProtectedRoute teacherOnly><TestSpecificResults /></ProtectedRoute>} />
         <Route path="/students-list" element={<ProtectedRoute teacherOnly><StudentsList /></ProtectedRoute>} />
-        <Route path="/student-profile/:rollNo" element={<ProtectedRoute teacherOnly><StudentProfile /></ProtectedRoute>} />
+        <Route path="/student-profile/:rollNo" element={<ProtectedRoute><StudentProfile /></ProtectedRoute>} />
 
 
       </Routes>
