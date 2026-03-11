@@ -35,13 +35,14 @@ const StartTestDashboard = () => {
   const [pendingTests, setPendingTests] = useState([]);
   const [outdatedTests, setOutdatedTests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pendingSearch, setPendingSearch]     = useState("");
+  const [pendingSearch, setPendingSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
-  const pendingDebounce   = useRef(null);
+  const pendingDebounce = useRef(null);
   const submittedDebounce = useRef(null);
-  const isPendingMounted   = useRef(false);
+  const isPendingMounted = useRef(false);
   const isSubmittedMounted = useRef(false);
-  const rollNoRef          = useRef("");
+  const rollNoRef = useRef("");
+
 
 
 
@@ -69,10 +70,10 @@ const StartTestDashboard = () => {
     const dl = new Date(deadline);
     const diffMs = dl - now;
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays < 0)  return { text: "Overdue",          cls: "bg-danger" };
-    if (diffDays === 0) return { text: "Due Today!",       cls: "bg-danger" };
-    if (diffDays === 1) return { text: "Due Tomorrow",     cls: "bg-warning text-dark" };
-    if (diffDays <= 3)  return { text: `Due in ${diffDays} days`, cls: "bg-warning text-dark" };
+    if (diffDays < 0) return { text: "Overdue", cls: "bg-danger" };
+    if (diffDays === 0) return { text: "Due Today!", cls: "bg-danger" };
+    if (diffDays === 1) return { text: "Due Tomorrow", cls: "bg-warning text-dark" };
+    if (diffDays <= 3) return { text: `Due in ${diffDays} days`, cls: "bg-warning text-dark" };
     return { text: `Due ${dl.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, cls: "bg-info" };
   };
 
@@ -218,28 +219,28 @@ const StartTestDashboard = () => {
   // };
 
   // ✅ Sort submitted results by date (oldest → latest) to fix "opposite" graph issue
-const sortedResults = [...submittedResults]
-  .sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
-  .reverse();
-// ✅ Chart data from sorted results
-const chartData = {
-  labels: sortedResults.map((result) => result.testId?.title || "Test"),
-  datasets: [
-    {
-      label: "Score (%)",
-      data: sortedResults.map((result) => Number(result.score) || 0),
-      borderColor: "#004b8d",
-      backgroundColor: "rgba(0, 75, 141, 0.1)",
-      tension: 0.4,
-      fill: true,
-      pointBackgroundColor: "#004b8d",
-      pointBorderColor: "#fff",
-      pointBorderWidth: 2,
-      pointRadius: 6,
-      pointHoverRadius: 8,
-    },
-  ],
-};
+  const sortedResults = [...submittedResults]
+    .sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt))
+    .reverse();
+  // ✅ Chart data from sorted results
+  const chartData = {
+    labels: sortedResults.map((result) => result.testId?.title || "Test"),
+    datasets: [
+      {
+        label: "Score (%)",
+        data: sortedResults.map((result) => Number(result.score) || 0),
+        borderColor: "#004b8d",
+        backgroundColor: "rgba(0, 75, 141, 0.1)",
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: "#004b8d",
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+      },
+    ],
+  };
 
 
 
@@ -375,7 +376,7 @@ const chartData = {
             {/* Score Performance Chart */}
             {submittedResults.length > 0 && (
               <div className="mb-5">
-                <h2 className="mb-4 text-center" style={{color: '#004b8d', fontWeight: '700'}}>
+                <h2 className="mb-4 text-center" style={{ color: '#004b8d', fontWeight: '700' }}>
                   Your Test Score Performance
                 </h2>
                 <div className="card shadow-sm p-4">
@@ -386,20 +387,20 @@ const chartData = {
 
             {/* Pending Tests Section */}
             <div className="mb-5">
-                  <input
-                  type="text"
-                  className="form-control mb-3"
-                   placeholder="Search Pending Tests..."
-                    value={pendingSearch}
-                    onChange={(e) => setPendingSearch(e.target.value)}
-                        />
-              <h3 className="mb-4" style={{color: '#004b8d', fontWeight: '700'}}>
+              <input
+                type="text"
+                className="form-control mb-3"
+                placeholder="Search Pending Tests..."
+                value={pendingSearch}
+                onChange={(e) => setPendingSearch(e.target.value)}
+              />
+              <h3 className="mb-4" style={{ color: '#004b8d', fontWeight: '700' }}>
                 <i className="bi bi-hourglass-split me-2"></i>
                 Pending Tests
               </h3>
               {pendingTests.length === 0 ? (
                 <div className="text-center py-5">
-                  <i className="bi bi-check-circle" style={{fontSize: '3rem', color: '#28a745'}}></i>
+                  <i className="bi bi-check-circle" style={{ fontSize: '3rem', color: '#28a745' }}></i>
                   <h5 className="mt-3 text-success">All Caught Up!</h5>
                   <p className="text-muted">You have completed all available tests</p>
                 </div>
@@ -416,11 +417,11 @@ const chartData = {
                         <p className="text-muted mb-3">{test.description}</p>
                         <div className="d-flex flex-wrap align-items-center gap-3 mb-3">
                           <div className="d-flex align-items-center gap-2">
-                            <i className="bi bi-question-circle" style={{color: '#004b8d'}}></i>
+                            <i className="bi bi-question-circle" style={{ color: '#004b8d' }}></i>
                             <small className="text-muted">{test.totalQuestions} Questions</small>
                           </div>
                           <div className="d-flex align-items-center gap-2">
-                            <i className="bi bi-clock" style={{color: '#004b8d'}}></i>
+                            <i className="bi bi-clock" style={{ color: '#004b8d' }}></i>
                             <small className="text-muted">{test.timeLimit} Minutes</small>
                           </div>
                           {(() => {
@@ -449,19 +450,19 @@ const chartData = {
             {/* Past Deadline Section */}
             {outdatedTests.length > 0 && (
               <div className="mb-5">
-                <h3 className="mb-4" style={{color: '#dc3545', fontWeight: '700'}}>
+                <h3 className="mb-4" style={{ color: '#dc3545', fontWeight: '700' }}>
                   <i className="bi bi-calendar-x me-2"></i>
                   Past Deadline
                   <span className="badge bg-danger ms-2">{outdatedTests.length}</span>
                 </h3>
-                <p className="text-muted mb-3" style={{fontSize: '0.9rem'}}>
+                <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
                   <i className="bi bi-info-circle me-1"></i>
                   These tests had a deadline that has passed. You can still attempt them but they are marked as overdue.
                 </p>
                 <div className="row g-4">
                   {outdatedTests.map((test) => (
                     <div key={test._id} className="col-md-6 col-lg-4">
-                      <div className="card shadow-sm p-4 hover-card test-card" style={{opacity: 0.75, borderLeft: '4px solid #dc3545'}}>
+                      <div className="card shadow-sm p-4 hover-card test-card" style={{ opacity: 0.75, borderLeft: '4px solid #dc3545' }}>
                         <div className="d-flex justify-content-between align-items-start mb-3">
                           <h5 className="fw-bold mb-0">{test.title}</h5>
                           <span className="badge bg-danger">Overdue</span>
@@ -499,20 +500,20 @@ const chartData = {
             {/* Submitted Tests Section */}
             <div className="mb-5">
               <input
-  type="text"
-  className="form-control mb-3"
-  placeholder="Search Submitted Tests..."
-  value={submittedSearch}
-  onChange={(e) => setSubmittedSearch(e.target.value)}
-/>
+                type="text"
+                className="form-control mb-3"
+                placeholder="Search Submitted Tests..."
+                value={submittedSearch}
+                onChange={(e) => setSubmittedSearch(e.target.value)}
+              />
 
-              <h3 className="mb-4" style={{color: '#004b8d', fontWeight: '700'}}>
+              <h3 className="mb-4" style={{ color: '#004b8d', fontWeight: '700' }}>
                 <i className="bi bi-check2-square me-2"></i>
-                Submitted Tests
+                Completed Tests
               </h3>
               {submittedResults.length === 0 ? (
                 <div className="text-center py-5">
-                  <i className="bi bi-clipboard-x" style={{fontSize: '3rem', color: '#6c757d'}}></i>
+                  <i className="bi bi-clipboard-x" style={{ fontSize: '3rem', color: '#6c757d' }}></i>
                   <h5 className="mt-3 text-muted">No Tests Submitted Yet</h5>
                   <p className="text-muted">Start taking tests to see your results here</p>
                 </div>
@@ -562,7 +563,7 @@ const chartData = {
                           {/* Details */}
                           <div className="test-details mb-3">
                             <div className="d-flex align-items-center gap-2 mb-2">
-                              <i className="bi bi-calendar3" style={{color: '#004b8d'}}></i>
+                              <i className="bi bi-calendar3" style={{ color: '#004b8d' }}></i>
                               <small className="text-muted">
                                 Submitted: {formatDate(result.submittedAt)}
                               </small>

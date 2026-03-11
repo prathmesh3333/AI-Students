@@ -648,6 +648,36 @@ router.get("/pending/:rollNo", async (req, res) => {
 });
 
 /* ===============================
+   GET COMPLETED TESTS FOR STUDENT
+================================ */
+router.get("/completed/:rollNo", async (req, res) => {
+  try {
+    const { rollNo } = req.params;
+
+    const results = await TestResult.find({ rollNo })
+      .populate("testId");
+
+    const completedTests = results.map(r => ({
+      ...r.testId.toObject(),
+      score: r.score,
+      submittedAt: r.submittedAt
+    }));
+
+    res.json({
+      success: true,
+      tests: completedTests
+    });
+
+  } catch (error) {
+    console.error("❌ Completed tests error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch completed tests"
+    });
+  }
+});
+
+/* ===============================
    GET TEST BY ID (TAKE TEST)
 ================================ */
 router.get("/:id", async (req, res) => {

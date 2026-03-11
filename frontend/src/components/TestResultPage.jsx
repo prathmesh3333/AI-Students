@@ -21,7 +21,7 @@ const TestResultPage = () => {
   const { result, testTitle, tabSwitchCount, violations } = location.state || {};
 
   const proctorData = violations || {
-    NO_FACE: 0, MULTIPLE_FACE: 0, VOICE_DETECTED: 0, TAB_SWITCH: 0,
+    NO_FACE: 0, MULTIPLE_FACE: 0, VOICE_DETECTED: 0, TAB_SWITCH: 0,BOOK_DETECTED: 0, PHONE_DETECTED: 0,
   };
 
   if (!result) {
@@ -38,40 +38,42 @@ const TestResultPage = () => {
     );
   }
 
-  const pct     = result.score;
+  const pct = result.score;
   const correct = result.correctAnswers;
-  const total   = result.totalQuestions;
-  const wrong   = total - correct;
+  const total = result.totalQuestions;
+  const wrong = total - correct;
   const isPassed = pct >= 50;
 
   const grade =
     pct >= 90 ? "Outstanding" :
-    pct >= 70 ? "Great Job"   :
-    pct >= 50 ? "Passed"      : "Keep Trying";
+      pct >= 70 ? "Great Job" :
+        pct >= 50 ? "Passed" : "Keep Trying";
 
   const gradeColor =
     pct >= 90 ? "#10b981" :
-    pct >= 70 ? "#3b82f6" :
-    pct >= 50 ? "#f59e0b" : "#ef4444";
+      pct >= 70 ? "#3b82f6" :
+        pct >= 50 ? "#f59e0b" : "#ef4444";
 
   const perfEmoji =
     pct >= 90 ? "🏆" : pct >= 70 ? "⭐" : pct >= 50 ? "👍" : "💪";
 
   const perfSub =
-    pct >= 90 ? "You've demonstrated excellent understanding of the subject."  :
-    pct >= 70 ? "You've shown a great grasp of the concepts."                  :
-    pct >= 50 ? "You passed! Keep practising to improve further."              :
-                "Don't give up! Review the material and try again.";
+    pct >= 90 ? "You've demonstrated excellent understanding of the subject." :
+      pct >= 70 ? "You've shown a great grasp of the concepts." :
+        pct >= 50 ? "You passed! Keep practising to improve further." :
+          "Don't give up! Review the material and try again.";
 
   // SVG ring  r=52 → C = 2πr ≈ 326.7
-  const C   = 326.7;
+  const C = 326.7;
   const arc = (pct / 100) * C;
 
   const totalViolations =
-    (proctorData.NO_FACE       || 0) +
+    (proctorData.NO_FACE || 0) +
     (proctorData.MULTIPLE_FACE || 0) +
-    (proctorData.VOICE_DETECTED|| 0) +
-    (tabSwitchCount            || 0);
+    (proctorData.VOICE_DETECTED || 0) +
+    (proctorData.PHONE_DETECTED || 0) +
+    (proctorData.BOOK_DETECTED  || 0) +
+    (tabSwitchCount || 0);
 
   return (
     <div className="trp-wrapper">
@@ -173,10 +175,18 @@ const TestResultPage = () => {
             )}
           </div>
           <div className="trp-proctor-grid">
-            <ProcRow icon="bi-person-x"    label="No Face Detected" count={proctorData.NO_FACE        || 0} color="#f59e0b" />
-            <ProcRow icon="bi-people-fill" label="Multiple Faces"   count={proctorData.MULTIPLE_FACE  || 0} color="#ef4444" />
-            <ProcRow icon="bi-mic-fill"    label="Voice Detected"   count={proctorData.VOICE_DETECTED || 0} color="#8b5cf6" />
-            <ProcRow icon="bi-window-stack"label="Tab Switches"     count={tabSwitchCount             || 0} color="#f97316" />
+            <ProcRow icon="bi-person-x" label="No Face Detected" count={proctorData.NO_FACE || 0} color="#f59e0b" />
+            <ProcRow icon="bi-people-fill" label="Multiple Faces" count={proctorData.MULTIPLE_FACE || 0} color="#ef4444" />
+            <ProcRow icon="bi-mic-fill" label="Voice Detected" count={proctorData.VOICE_DETECTED || 0} color="#8b5cf6" />
+            <ProcRow icon="bi-window-stack" label="Tab Switches" count={tabSwitchCount || 0} color="#f97316" />
+            <ProcRow icon="bi-phone"label="Phone Detected"count={proctorData.PHONE_DETECTED || 0} color="#ef4444"
+            />
+            <ProcRow
+  icon="bi-book"
+  label="Book Detected"
+  count={proctorData.BOOK_DETECTED || 0}
+  color="#dc2626"
+/>
           </div>
         </div>
 
