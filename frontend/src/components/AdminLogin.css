@@ -1,0 +1,217 @@
+/* ================================================
+   ADMIN LOGIN PAGE
+   ================================================ */
+
+.al-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-900);
+  position: relative;
+  overflow: hidden;
+  padding: 1.5rem;
+}
+
+/* Background blobs */
+.al-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.18;
+  pointer-events: none;
+}
+.al-blob--1 {
+  width: 420px;
+  height: 420px;
+  background: var(--primary-gradient);
+  top: -120px;
+  left: -120px;
+}
+.al-blob--2 {
+  width: 320px;
+  height: 320px;
+  background: linear-gradient(135deg, #00d5ff, #0095ff);
+  bottom: -80px;
+  right: -80px;
+}
+
+/* Card */
+.al-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(14, 24, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-2xl);
+  padding: 2.5rem 2.25rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(102, 126, 234, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+/* Header */
+.al-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.al-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  background: var(--primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  color: #fff;
+  margin: 0 auto 1.1rem;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+}
+.al-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #dceeff;
+  margin-bottom: 0.25rem;
+}
+.al-subtitle {
+  font-size: 0.875rem;
+  color: #4a7099;
+  margin: 0;
+}
+
+/* Form */
+.al-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* Alert */
+.al-alert {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-md);
+  color: #fca5a5;
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Field */
+.al-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.al-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6a90b8;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.al-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  font-size: 0.9375rem;
+  font-family: var(--font-family);
+  color: #cce0ff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.al-input::placeholder {
+  color: #2e4d6a;
+}
+.al-input:focus {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.07);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+/* Password wrapper */
+.al-pw-wrap {
+  position: relative;
+}
+.al-pw-wrap .al-input {
+  padding-right: 3rem;
+}
+.al-pw-toggle {
+  position: absolute;
+  right: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #4a7099;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.al-pw-toggle:hover {
+  color: #6ab8ff;
+}
+
+/* Submit button */
+.al-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.875rem;
+  margin-top: 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--primary-gradient);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.35);
+  transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+}
+.al-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.48);
+}
+.al-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.al-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.al-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Back link */
+.al-back {
+  text-align: center;
+  margin-top: 1.5rem;
+  margin-bottom: 0;
+}
+.al-back a {
+  font-size: 0.8125rem;
+  color: #3a6a9e;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.al-back a:hover {
+  color: #6ab8ff;
+}

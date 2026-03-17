@@ -1,0 +1,124 @@
+/* ============================================================
+   SUCCESS MODAL — Dark Premium
+   ============================================================ */
+.success-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: smFadeIn 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes smFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Content ── */
+.success-modal-content {
+  background: #111827;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px;
+  padding: 48px 40px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+  animation: smSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.success-modal-content::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(16,185,129,0.4), transparent);
+}
+
+@keyframes smSlideIn {
+  0%   { opacity: 0; transform: scale(0.82) translateY(28px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Checkmark SVG ── */
+.success-icon-wrapper {
+  margin-bottom: 28px;
+  display: flex;
+  justify-content: center;
+}
+
+.success-svg {
+  width: 100px;
+  height: 100px;
+  filter: drop-shadow(0 0 18px rgba(16,185,129,0.35));
+  animation: smScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+.success-svg-circle {
+  fill: rgba(16,185,129,0.08);
+  stroke-dasharray: 314;
+  stroke-dashoffset: 314;
+  animation: smCircle 0.6s ease forwards;
+}
+
+.success-svg-check {
+  fill: none;
+  stroke-dasharray: 80;
+  stroke-dashoffset: 80;
+  animation: smCheck 0.4s ease 0.5s forwards;
+}
+
+@keyframes smCircle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes smCheck {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── Title & Message ── */
+.success-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.95);
+  margin-bottom: 12px;
+}
+
+.success-message {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.65;
+  margin-bottom: 32px;
+}
+
+/* ── Button ── */
+.success-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border: none;
+  padding: 14px 42px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 8px 22px rgba(16,185,129,0.35);
+}
+
+.success-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(16,185,129,0.5);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .success-modal-content { padding: 36px 26px; }
+  .success-svg { width: 80px; height: 80px; }
+  .success-title   { font-size: 1.7rem; }
+  .success-message { font-size: 0.92rem; }
+}

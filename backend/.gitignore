@@ -1,0 +1,77 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+*.log
+*.sqlite3
+db.sqlite3
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter
+.ipynb_checkpoints
+
+# -----------------------------
+# Node / Frontend
+# -----------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+.cache/
+.next/
+out/
+coverage/
+.vscode/
+.DS_Store
+
+# -----------------------------
+# Environment & Secrets
+# -----------------------------
+*.env
+*.env.local
+*.env.development
+*.env.production
+*.env.test
+
+# -----------------------------
+# VS Code & IDE
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -----------------------------
+# OS files
+# -----------------------------
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# -----------------------------
+# Miscellaneous
+# -----------------------------
+# Ignore temporary files
+tmp/
+temp/
+*.bak
+*.tmp

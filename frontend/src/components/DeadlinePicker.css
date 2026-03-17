@@ -1,0 +1,463 @@
+/* ============================================================
+   DEADLINE PICKER — Dark Premium Calendar
+   ============================================================ */
+
+/* ── Trigger Button ── */
+.dp-wrap {
+  width: 100%;
+  position: relative;
+  display: inline-block;
+}
+
+.dp-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.45);
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, color 0.2s;
+  font-family: inherit;
+}
+
+.dp-trigger:hover {
+  border-color: rgba(99,102,241,0.6);
+  background: rgba(99,102,241,0.06);
+  color: rgba(255,255,255,0.7);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+
+.dp-trigger-filled {
+  border-color: rgba(99,102,241,0.5);
+  background: rgba(99,102,241,0.08);
+  color: #c7d2fe;
+  font-weight: 600;
+}
+.dp-trigger-filled:hover {
+  background: rgba(99,102,241,0.14);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
+}
+
+.dp-tr-icon {
+  font-size: 1rem;
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.dp-tr-text { flex: 1; }
+
+.dp-tr-x {
+  color: rgba(255,255,255,0.3);
+  font-size: 0.78rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.dp-tr-x:hover { color: #f87171; background: rgba(239,68,68,0.12); }
+
+.dp-tr-chev {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.25);
+  flex-shrink: 0;
+}
+
+/* ── Backdrop ── */
+.dp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+}
+
+/* ── Panel ── */
+.dp-panel {
+  position: fixed;
+  z-index: 9001;
+  background: #0d1117;
+  border: 1px solid rgba(99,102,241,0.28);
+  border-radius: 20px;
+  box-shadow:
+    0 32px 80px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  animation: dpIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@keyframes dpIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+
+/* ── Month Navigation ── */
+.dp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+  background: linear-gradient(180deg, rgba(99,102,241,0.12) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dp-nav-btn {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+.dp-nav-btn:hover:not(:disabled) {
+  background: rgba(99,102,241,0.2);
+  border-color: rgba(99,102,241,0.45);
+  color: #a5b4fc;
+  box-shadow: 0 0 10px rgba(99,102,241,0.3);
+}
+
+.dp-nav-btn-disabled {
+  opacity: 0.2;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.dp-month-yr {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.dp-month-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.dp-yr {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+}
+
+/* ── Calendar Grid ── */
+.dp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  padding: 12px 12px 8px;
+}
+
+.dp-wd {
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 0 0 8px;
+}
+
+.dp-cell {
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 10px;
+  cursor: default;
+  color: rgba(255,255,255,0.75);
+  position: relative;
+  transition: background 0.12s, color 0.12s, transform 0.12s;
+  user-select: none;
+}
+
+/* hoverable active dates */
+.dp-cell.dp-active {
+  cursor: pointer;
+}
+.dp-cell.dp-active:hover {
+  background: rgba(99,102,241,0.22);
+  color: #c7d2fe;
+  transform: scale(1.08);
+}
+
+.dp-cell.dp-blank { cursor: default; }
+
+.dp-cell.dp-past {
+  color: rgba(255,255,255,0.15);
+  cursor: not-allowed;
+  pointer-events: none;
+  text-decoration: line-through;
+  text-decoration-color: rgba(255,255,255,0.12);
+}
+
+.dp-cell.dp-today {
+  color: #a5b4fc;
+  font-weight: 800;
+}
+.dp-cell.dp-today::after {
+  content: '';
+  position: absolute;
+  bottom: 4px; left: 50%;
+  transform: translateX(-50%);
+  width: 4px; height: 4px;
+  background: #6366f1;
+  border-radius: 50%;
+}
+
+.dp-cell.dp-sel {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: #fff !important;
+  font-weight: 800;
+  cursor: pointer;
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(99,102,241,0.55), 0 0 0 2px rgba(139,92,246,0.3);
+  z-index: 1;
+}
+.dp-cell.dp-sel.dp-today::after { background: rgba(255,255,255,0.7); }
+
+/* ── Time Section ── */
+.dp-time-section {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 14px 16px 10px;
+  background: rgba(0,0,0,0.2);
+}
+
+.dp-time-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 14px;
+}
+
+.dp-ist-chip {
+  margin-left: auto;
+  background: rgba(99,102,241,0.18);
+  border: 1px solid rgba(99,102,241,0.3);
+  color: #a5b4fc;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 50px;
+  text-transform: none;
+}
+
+/* ── Spinners Row ── */
+.dp-spinners-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.dp-spinner-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.dp-spin-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.28);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.dp-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  width: 56px;
+  cursor: ns-resize;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.dp-spinner:hover {
+  border-color: rgba(99,102,241,0.4);
+  box-shadow: 0 0 10px rgba(99,102,241,0.2);
+}
+
+.dp-spin-btn {
+  width: 100%;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+  cursor: pointer;
+  font-size: 0.7rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+  line-height: 1;
+}
+.dp-spin-btn:hover {
+  background: rgba(99,102,241,0.2);
+  color: #a5b4fc;
+}
+.dp-spin-btn:active {
+  background: rgba(99,102,241,0.35);
+}
+
+.dp-spin-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  padding: 4px 0;
+  background: rgba(99,102,241,0.07);
+  width: 100%;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dp-colon {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.25);
+  margin: 0 2px;
+  line-height: 1;
+  padding-top: 18px; /* align with value row */
+}
+
+/* AM/PM Drum */
+.dp-ampm-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  width: 52px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  gap: 0;
+  transition: border-color 0.15s;
+}
+.dp-ampm-btn:hover { border-color: rgba(99,102,241,0.4); }
+
+.dp-ampm-top,
+.dp-ampm-bot {
+  padding: 5px 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.22);
+  text-align: center;
+  width: 100%;
+  letter-spacing: 0.5px;
+}
+
+.dp-ampm-cur {
+  display: block;
+  padding: 5px 0;
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: center;
+  width: 100%;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dp-ampm-am .dp-ampm-cur  { color: #67e8f9; background: rgba(6,182,212,0.1); }
+.dp-ampm-pm .dp-ampm-cur  { color: #c084fc; background: rgba(168,85,247,0.1); }
+
+/* Preview */
+.dp-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.28);
+  font-style: italic;
+  text-align: center;
+  padding: 4px 4px 0;
+  transition: color 0.2s;
+  gap: 2px;
+}
+.dp-preview.dp-preview-ready {
+  color: #a5b4fc;
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ── Footer Actions ── */
+.dp-footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.dp-btn-clear {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.4);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.dp-btn-clear:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.3);
+  color: #fca5a5;
+}
+
+.dp-btn-confirm {
+  flex: 1;
+  padding: 9px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+  font-family: inherit;
+  letter-spacing: 0.2px;
+}
+.dp-btn-confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(99,102,241,0.55);
+}
+.dp-btn-confirm:active:not(:disabled) {
+  transform: translateY(0);
+}
+.dp-btn-confirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
